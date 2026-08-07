@@ -22,5 +22,3 @@ npm-*
 /translations
 
 *.log
-
-package-lock.json
