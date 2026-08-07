@@ -41,9 +41,9 @@ test('buttons', t => {
     const xml = vm.runtime.getBlocksXML();
     t.equal(xml.length, 1);
 
-    const parsed = htmlparser.parseDOM(xml[0].xml, {
+    const parsed = htmlparser.parseDocument(xml[0].xml, {
         decodeEntities: true
-    });
+    }).children;
     t.equal(parsed.length, 1);
 
     const category = parsed[0];

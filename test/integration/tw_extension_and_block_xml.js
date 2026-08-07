@@ -86,7 +86,7 @@ test('XML escaped in Runtime.getBlocksXML()', t => {
     const xmlEntry = xmlList[0];
     t.equal(xmlEntry.id, `xmltest`, 'id worked');
 
-    const parsedXml = htmlparser.parseDOM(xmlEntry.xml);
+    const parsedXml = htmlparser.parseDocument(xmlEntry.xml).children;
     t.equal(parsedXml.length, 1, 'xml has 1 root node');
 
     /*
@@ -217,7 +217,7 @@ test('ID escaped in Runtime.getBlocksXML()', t => {
     const xmlEntry = xmlList[0];
     t.equal(xmlEntry.id, `id <>&"'`, 'extension id outside of xml unchanged');
 
-    const parsedXML = htmlparser.parseDOM(xmlEntry.xml);
+    const parsedXML = htmlparser.parseDocument(xmlEntry.xml).children;
     t.equal(parsedXML.length, 1, 'XML has 1 root node');
 
     const category = parsedXML[0];
@@ -246,7 +246,7 @@ test('XML escaped in Blocks.toXML()', async t => {
 
     const checkVM = () => {
         const generatedXML = vm.runtime.targets[0].blocks.toXML();
-        const parsedXML = htmlparser.parseDOM(generatedXML);
+        const parsedXML = htmlparser.parseDocument(generatedXML).children;
 
         /*
         Example expected XML:

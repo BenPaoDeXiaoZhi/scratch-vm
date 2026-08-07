@@ -21,7 +21,7 @@ test('XML blocks', t => {
     const xmlList = vm.runtime.getBlocksXML();
     t.equal(xmlList.length, 1);
 
-    const parsedXML = htmlparser.parseDOM(xmlList[0].xml);
+    const parsedXML = htmlparser.parseDocument(xmlList[0].xml).children;
     t.equal(parsedXML.length, 1);
 
     const category = parsedXML[0];

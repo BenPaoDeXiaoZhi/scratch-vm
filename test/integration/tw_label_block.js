@@ -21,7 +21,7 @@ test('Label blocks', t => {
     const xmlList = vm.runtime.getBlocksXML();
     t.equal(xmlList.length, 1);
 
-    const parsedXML = htmlparser.parseDOM(xmlList[0].xml);
+    const parsedXML = htmlparser.parseDocument(xmlList[0].xml).children;
     // Expecting something like this:
     // <category name="Label Test" id="testlabel" colour="#0FBD8C" secondaryColour="#0DA57A">
     //   <label text="&lt;&gt;&amp;&quot;&apos;"></label>
