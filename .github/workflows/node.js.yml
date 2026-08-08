@@ -22,9 +22,15 @@ jobs:
         run: |
           echo "@open-ccw:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}" >> .npmrc
-      - name: Configure npm registry
-        run: npm config set registry https://registry.npmjs.org
-      - run: npm ci --registry=https://registry.npmjs.org
+      - name: Configure npm
+        run: |
+          npm config set registry https://registry.npmjs.org
+          npm config set build-from-source false
+          echo "ignore-scripts=false" >> .npmrc
+      # npm ci 在 npm 10.8.2 上对 rolldown/lightningcss 平台绑定存在可选依赖 bug（npm/cli#4828），
+      # 会导致即便 lockfile 完整仍 exit 1。改用 npm install 规避该问题。
+      - name: Install dependencies
+        run: npm install --registry=https://registry.npmjs.org --no-audit --no-fund --ignore-scripts=false
       - name: Type check
         run: npx tsc --noEmit
       - run: npm run build
