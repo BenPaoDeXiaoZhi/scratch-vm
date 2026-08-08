@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
           external: ["buffer"],
         },
       },
+      base: "./"
     };
   }
 
@@ -54,5 +55,6 @@ export default defineConfig(({ mode }) => {
       // unless we opt in explicitly.
       emptyOutDir: true,
     },
+    base: "./"
   };
 });
