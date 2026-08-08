@@ -13,7 +13,9 @@
       "require": "./lib/index.cjs"
     }
   },
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "types": "./src/index.ts",
   "scripts": {
     "dev": "vite",
@@ -21,11 +23,12 @@
     "build:lib": "vite build --mode lib"
   },
   "devDependencies": {
+    "@open-ccw/scratch-render": "^9.9.12",
+    "@open-ccw/scratch-storage": "^9.9.10",
     "@types/crypto-js": "^4.2.2",
     "@types/immutable": "^3.8.6",
     "@types/node": "^26.1.2",
     "crypto-js": "^4.2.0",
-    "scratch-render": "^9.9.11",
     "vite": "^8.2.0"
   },
   "dependencies": {
@@ -40,7 +43,6 @@
     "scratch-audio": "^2.0.268",
     "scratch-parser": "^6.0.0",
     "scratch-sb1-converter": "^2.0.279",
-    "scratch-storage": "^9.9.9",
     "scratch-translate-extension-languages": "^1.0.7",
     "uuid": "^14.0.1"
   }

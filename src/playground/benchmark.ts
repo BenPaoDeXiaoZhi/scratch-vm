@@ -1,9 +1,9 @@
 import { loadCostume as importLoadCostume } from "../import/load-costume";
 import { loadSound as importLoadSound } from "../import/load-sound";
-import ScratchStorage from "scratch-storage";
+import ScratchStorage from "@open-ccw/scratch-storage";
 import VirtualMachine from "..";
 import Runtime from "../engine/runtime";
-import { RenderWebGL as ScratchRender } from "scratch-render";
+import { RenderWebGL as ScratchRender } from "@open-ccw/scratch-render";
 import AudioEngine from "scratch-audio";
 import { decrypt } from "./decrypt";
 
