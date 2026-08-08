@@ -3,7 +3,7 @@
 
 # NPM
 /node_modules
-npm-*
+npm-debug.log
 
 # Testing
 /.nyc_output
