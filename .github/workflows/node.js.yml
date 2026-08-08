@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   build:
@@ -17,6 +18,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
+      - name: Authenticate to GitHub Packages
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}" >> .npmrc
       - run: npm ci
       - name: Type check
         run: npx tsc --noEmit
