@@ -183,7 +183,7 @@ class BT extends JSONRPC {
    * Disconnect the socket, and if the extension using this socket has a
    * reset callback, call it. Finally, emit an error to the runtime.
    */
-  handleDisconnectError(/* e */): void {
+  handleDisconnectError(e:any): void {
     // log.error(`BT error: ${JSON.stringify(e)}`);
 
     if (!this._connected) return;
@@ -203,7 +203,7 @@ class BT extends JSONRPC {
     );
   }
 
-  _handleRequestError(/* e */): void {
+  _handleRequestError(e:any): void {
     // log.error(`BT error: ${JSON.stringify(e)}`);
 
     this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR, {

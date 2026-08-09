@@ -224,7 +224,7 @@ class Keyboard {
       if (this._numeralKeyCodesToStringKey.has(keyCode)) {
         const lastKeyOfSameCode = this._numeralKeyCodesToStringKey.get(keyCode);
         if (lastKeyOfSameCode !== scratchKey) {
-          const indexToUnpress = this._keysPressed.indexOf(lastKeyOfSameCode);
+          const indexToUnpress = this._keysPressed.indexOf(lastKeyOfSameCode!);
           if (indexToUnpress !== -1) {
             this._keysPressed.splice(indexToUnpress, 1);
           }

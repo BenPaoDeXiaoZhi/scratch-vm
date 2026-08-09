@@ -12,7 +12,6 @@ class TaskQueue {
     _timer: Timer;
     _timeout: any;
     _lastUpdateTime: number;
-    _runTasks: () => void;
 
     /**
      * Creates an instance of TaskQueue.
@@ -68,7 +67,7 @@ class TaskQueue {
                 return Promise.reject(new Error('Maximum total cost exceeded'));
             }
         }
-        const newRecord = {
+        const newRecord:any = {
             cost
         };
         newRecord.promise = new Promise((resolve, reject) => {

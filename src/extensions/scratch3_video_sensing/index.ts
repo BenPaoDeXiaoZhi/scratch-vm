@@ -69,7 +69,12 @@ const VideoState = {
  * @constructor
  */
 class Scratch3VideoSensingBlocks {
-    constructor (runtime) {
+    runtime: any;
+    detect: VideoMotion;
+    _lastUpdate: null|number;
+    firstInstall: boolean;
+    _loopInterval: NodeJS.Timeout|number=-1;
+    constructor (runtime: Runtime) {
         /**
          * The runtime instantiating this block package.
          * @type {Runtime}
@@ -266,7 +271,7 @@ class Scratch3VideoSensingBlocks {
      */
     _buildMenu (info) {
         return info.map((entry, index) => {
-            const obj = {};
+            const obj:any = {};
             obj.text = entry.name;
             obj.value = entry.value || String(index + 1);
             return obj;

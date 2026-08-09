@@ -36,7 +36,7 @@ class Clock {
 
   resume(): void {
     this._paused = false;
-    const dt = this._projectTimer.timeElapsed() - this._pausedTime;
+    const dt = this._projectTimer.timeElapsed() - this._pausedTime!;
     this._projectTimer.startTime += dt;
   }
 

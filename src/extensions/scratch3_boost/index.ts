@@ -1,7 +1,6 @@
 import ArgumentType from "../../extension-support/argument-type";
 import BlockType from "../../extension-support/block-type";
 import Cast from "../../util/cast";
-// @ts-expect-error
 import formatMessage from "format-message";
 import color from "../../util/color";
 import BLE from "../../io/ble";
@@ -672,7 +671,7 @@ class BoostMotor {
 class Boost {
   private _runtime: any;
   private _extensionId: string;
-  private _ports: number[];
+  private _ports: (string | number)[];
   private _motors: (BoostMotor | null)[];
   private _sensors: {
     tiltX: number;
@@ -683,9 +682,8 @@ class Boost {
   private _colorSamples: number[];
   private _ble: any | null;
   private _rateLimiter: any;
-  private _pingDeviceId: NodeJS.Timeout | null;
-  private _updateDevices: boolean;
-  private _led: number;
+  private _pingDeviceId: number | null;
+  public _led: number = 0;
 
   constructor(runtime: any, extensionId: string) {
     /**
@@ -961,7 +959,7 @@ class Boost {
    * @return {Promise} - a promise result of the write operation
    */
   send(
-    uuid: number,
+    uuid: string,
     message: number[],
     useLimiter: boolean = true,
   ): Promise<void> {
@@ -1038,7 +1036,7 @@ class Boost {
       mode,
     ]
       .concat(numberToInt32Array(delta))
-      .concat([enableNotifications]);
+      .concat([enableNotifications ? 1 : 0]);
     command.unshift(command.length + 1); // Prepend payload with length byte;
 
     return command;
@@ -1157,9 +1155,13 @@ class Boost {
             }
             break;
           case BoostIO.MOTOREXT:
-          case BoostIO.MOTORINT:
-            this.motor(portID).position = int32ArrayToNumber(data.slice(4, 8));
+          case BoostIO.MOTORINT: {
+            const motor = this.motor(portID);
+            if (motor) {
+              motor.position = int32ArrayToNumber(data.slice(4, 8));
+            }
             break;
+          }
           case BoostIO.CURRENT:
           case BoostIO.VOLTAGE:
           case BoostIO.LED:
@@ -1220,7 +1222,7 @@ class Boost {
     }
 
     // Set input format for tilt or distance sensor
-    let mode = null;
+    let mode: number | null = null;
     let delta = 1;
 
     switch (type) {
@@ -1247,6 +1249,8 @@ class Boost {
       default:
         mode = BoostMode.UNKNOWN;
     }
+
+    if (mode === null) return;
 
     const cmd = this.generateInputCommand(
       portID,
@@ -1788,7 +1792,7 @@ class Scratch3BoostBlocks {
               text: formatMessage({
                 id: "boost.color.white",
                 default: "white",
-                desription: "the color white",
+                description: "the color white",
               }),
               value: BoostColor.WHITE,
             },
@@ -1825,7 +1829,7 @@ class Scratch3BoostBlocks {
     // TODO: cast args.MOTOR_ID?
     let durationMS = Cast.toNumber(args.DURATION) * 1000;
     durationMS = MathUtil.clamp(durationMS, 0, 15000);
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
         const motor = this._peripheral.motor(motorIndex);
         if (motor) motor.turnOnFor(durationMS);
@@ -1845,12 +1849,12 @@ class Scratch3BoostBlocks {
    */
   motorOnForRotation(args) {
     // TODO: cast args.MOTOR_ID?
-    let degrees = Cast.toNumber(args.ROTATION) * 360;
+    let degrees: number = Cast.toNumber(args.ROTATION) * 360;
     // TODO: Clamps to 100 rotations. Consider changing.
     const sign = Math.sign(degrees);
     degrees = Math.abs(MathUtil.clamp(degrees, -360000, 360000));
 
-    const motors = [];
+    const motors: number[] = [];
     this._forEachMotor(args.MOTOR_ID, (motorIndex) => {
       motors.push(motorIndex);
     });
@@ -1859,17 +1863,21 @@ class Scratch3BoostBlocks {
      * Checks that the motors given in args.MOTOR_ID exist,
      * and maps a promise for each of the motor-commands to an array.
      */
-    const promises = motors.map((portID) => {
+    const promises: Promise<void>[] = [];
+    motors.forEach((portID) => {
       const motor = this._peripheral.motor(portID);
-      if (motor) {
-        // to avoid a hanging block if power is 0, return an immediately resolving promise.
-        if (motor.power === 0) return Promise.resolve();
-        return new Promise((resolve) => {
+      if (!motor) return;
+      // to avoid a hanging block if power is 0, return an immediately resolving promise.
+      if (motor.power === 0) {
+        promises.push(Promise.resolve());
+        return;
+      }
+      promises.push(
+        new Promise<void>((resolve) => {
           motor.turnOnForDegrees(degrees, sign);
           motor.pendingRotationPromise = resolve;
-        });
-      }
-      return null;
+        })
+      );
     });
     /**
      * Make sure all promises are resolved, i.e. all motor-commands have completed.
@@ -1891,7 +1899,7 @@ class Scratch3BoostBlocks {
       if (motor) motor.turnOnForever();
     });
 
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       window.setTimeout(() => {
         resolve();
       }, BoostBLE.sendInterval);
@@ -1911,7 +1919,7 @@ class Scratch3BoostBlocks {
       if (motor) motor.turnOff();
     });
 
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       window.setTimeout(() => {
         resolve();
       }, BoostBLE.sendInterval);
@@ -1936,16 +1944,21 @@ class Scratch3BoostBlocks {
             motor.turnOnForever();
             break;
           case BoostMotorState.ON_FOR_TIME:
-            motor.turnOnFor(
-              motor.pendingDurationTimeoutStartTime +
-                motor.pendingDurationTimeoutDelay -
-                Date.now(),
-            );
+            if (
+              motor.pendingDurationTimeoutStartTime !== null &&
+              motor.pendingDurationTimeoutDelay !== null
+            ) {
+              motor.turnOnFor(
+                motor.pendingDurationTimeoutStartTime +
+                  motor.pendingDurationTimeoutDelay -
+                  Date.now(),
+              );
+            }
             break;
         }
       }
     });
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       window.setTimeout(() => {
         resolve();
       }, BoostBLE.sendInterval);
@@ -1988,17 +2001,22 @@ class Scratch3BoostBlocks {
               motor.turnOnForever();
               break;
             case BoostMotorState.ON_FOR_TIME:
-              motor.turnOnFor(
-                motor.pendingDurationTimeoutStartTime +
-                  motor.pendingDurationTimeoutDelay -
-                  Date.now(),
-              );
+              if (
+                motor.pendingDurationTimeoutStartTime !== null &&
+                motor.pendingDurationTimeoutDelay !== null
+              ) {
+                motor.turnOnFor(
+                  motor.pendingDurationTimeoutStartTime +
+                    motor.pendingDurationTimeoutDelay -
+                    Date.now(),
+                );
+              }
               break;
           }
         }
       }
     });
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       window.setTimeout(() => {
         resolve();
       }, BoostBLE.sendInterval);
@@ -2010,7 +2028,7 @@ class Scratch3BoostBlocks {
    * @return {number} - returns the motor's position.
    */
   getMotorPosition(args) {
-    let portID = null;
+    let portID: number | null = null;
     switch (args.MOTOR_REPORTER_ID) {
       case BoostMotorLabel.A:
         portID = BoostPort.A;
@@ -2028,8 +2046,9 @@ class Scratch3BoostBlocks {
         log.warn("Asked for a motor position that doesnt exist!");
         return false;
     }
-    if (portID !== null && this._peripheral.motor(portID)) {
-      let val = this._peripheral.motor(portID).position;
+    const motor = portID !== null ? this._peripheral.motor(portID) : null;
+    if (portID !== null && motor) {
+      let val = motor.position;
       // Boost motor A position direction is reversed by design
       // so we have to reverse the position here
       if (portID === BoostPort.A) {
@@ -2154,6 +2173,7 @@ class Scratch3BoostBlocks {
           : -this._peripheral.tiltX;
       default:
         log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
+        return 0;
     }
   }
 
@@ -2211,7 +2231,7 @@ class Scratch3BoostBlocks {
     this._peripheral._led = inputHue;
     this._peripheral.setLED(rgbDecimal);
 
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       window.setTimeout(() => {
         resolve();
       }, BoostBLE.sendInterval);

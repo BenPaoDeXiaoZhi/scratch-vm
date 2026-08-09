@@ -15,6 +15,7 @@ npm-debug.log
 
 # Build
 /dist
+/lib
 /playground
 /benchmark
 

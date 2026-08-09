@@ -2,7 +2,6 @@ import ArgumentType from '../../extension-support/argument-type';
 import BlockType from '../../extension-support/block-type';
 import Clone from '../../util/clone';
 import Cast from '../../util/cast';
-// @ts-expect-error
 import formatMessage from 'format-message';
 import MathUtil from '../../util/math-util';
 import Timer from '../../util/timer';
@@ -39,6 +38,12 @@ const menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iM
  * @constructor
  */
 class Scratch3MusicBlocks {
+    runtime: any;
+    _concurrencyCounter: number;
+    _drumPlayers: any[];
+    _instrumentPlayerArrays: any[][];
+    _instrumentPlayerNoteArrays: any[][];
+    _bufferSources: any[];
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -96,7 +101,7 @@ class Scratch3MusicBlocks {
      * Decode the full set of drum and instrument sounds, and store the audio buffers in arrays.
      */
     _loadAllSounds () {
-        const loadingPromises = [];
+        const loadingPromises: any[] = [];
         this.DRUM_INFO.forEach((drumInfo, index) => {
             const filePath = `drums/${drumInfo.fileName}`;
             const promise = this._storeSound(filePath, index, this._drumPlayers);
@@ -162,12 +167,10 @@ class Scratch3MusicBlocks {
      * @private
      */
     _buildMenu (info) {
-        return info.map((entry, index) => {
-            const obj = {};
-            obj.text = entry.name;
-            obj.value = String(index + 1);
-            return obj;
-        });
+        return info.map((entry, index) => ({
+            text: entry.name,
+            value: String(index + 1),
+        }));
     }
 
     /**

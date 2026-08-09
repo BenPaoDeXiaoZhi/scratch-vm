@@ -12,7 +12,7 @@ const jQuery = () => {
     throw new Error('Not implemented');
 };
 
-jQuery.getScript = (src: string, callback?: () => void) => {
+jQuery.getScript = (src: string, callback?: (result?: any) => void) => {
     const script = document.createElement('script');
     script.src = src;
     if (callback) {

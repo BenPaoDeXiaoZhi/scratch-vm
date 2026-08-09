@@ -410,6 +410,8 @@ class Frame {
 }
 
 class JSGenerator {
+  static unstable_exports: any
+  static testingApparatus?: any
   /**
    * @type {IntermediateScript}
    */
@@ -1016,7 +1018,7 @@ class JSGenerator {
       case "procedures.callWithReturn": {
         const source = this.descendProcedure(node);
         // if (!source) break;
-        return new TypedInput(source, TYPE_PROCEDURE_RETURN);
+        return new TypedInput(source as string, TYPE_PROCEDURE_RETURN);
       }
 
       case "sensing.answer":
@@ -1676,7 +1678,7 @@ class JSGenerator {
     // Only include arguments if the procedure accepts any.
     let joinedArgs = "";
     if (procedureData.arguments.length) {
-      const args = [];
+      const args:any[] = [];
       for (const input of node.arguments) {
         args.push(this.descendInput(input).asSafe());
       }
@@ -1893,7 +1895,7 @@ class JSGenerator {
     script += this.getScriptName(this.script.yields);
     script += " (";
     if (this.script.arguments.length) {
-      const args = [];
+      const args: string[] = [];
       for (let i = 0; i < this.script.arguments.length; i++) {
         args.push(`p${i}`);
       }

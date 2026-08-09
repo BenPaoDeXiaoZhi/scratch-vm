@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import dts from "vite-plugin-dts";
 
 // Shared resolver and env shim for both the site and library builds.
 const commonConfig = {
@@ -41,7 +42,10 @@ export default defineConfig(({ mode }) => {
           external: ["buffer"],
         },
       },
-      base: "./"
+      base: "./",
+      plugins: [
+        dts(),
+      ],
     };
   }
 
@@ -55,6 +59,6 @@ export default defineConfig(({ mode }) => {
       // unless we opt in explicitly.
       emptyOutDir: true,
     },
-    base: "./"
+    base: "./",
   };
 });

@@ -181,7 +181,7 @@ class BLE extends JSONRPC {
     encoding: string | null = null,
     withResponse: boolean | null = null,
   ): Promise<any> {
-    const params = { serviceId, characteristicId, message };
+    const params: any = { serviceId, characteristicId, message };
     if (encoding) {
       params.encoding = encoding;
     }
@@ -248,7 +248,7 @@ class BLE extends JSONRPC {
    * Disconnect the socket, and if the extension using this socket has a
    * reset callback, call it. Finally, emit an error to the runtime.
    */
-  handleDisconnectError(/* e */): void {
+  handleDisconnectError(e: any): void {
     // log.error(`BLE error: ${JSON.stringify(e)}`);
 
     if (!this._connected) return;
@@ -268,7 +268,7 @@ class BLE extends JSONRPC {
     );
   }
 
-  _handleRequestError(/* e */): void {
+  _handleRequestError(e: any): void {
     // log.error(`BLE error: ${JSON.stringify(e)}`);
 
     this._runtime.emit(this._runtime.constructor.PERIPHERAL_REQUEST_ERROR, {

@@ -4,6 +4,7 @@ import BlockType from '../../extension-support/block-type';
 import formatMessage from 'format-message';
 import log from '../../util/log';
 import DiffMatchPatch from 'diff-match-patch';
+import type Runtime from '../../engine/runtime';
 
 /**
  * Url of icon to be displayed at the left edge of each extension block.
@@ -42,28 +43,20 @@ const finalResponseTimeoutDurationMs = 3000;
 const listenAndWaitBlockTimeoutMs = 10000;
 
 class Scratch3Speech2TextBlocks {
-    runtime: any;
+    runtime: Runtime;
     private _phraseList: string[];
     private _currentUtterance: string;
     private _utteranceForEdgeTrigger: string | null;
-    private _speechPromises: Array<() => void>;
+    private _speechPromises: Array<(...args:any) => void>;
     private _speechTimeoutId: ReturnType<typeof setTimeout> | null;
     private _speechFinalResponseTimeout: ReturnType<typeof setTimeout> | null;
     private _scriptNode: ScriptProcessorNode | null;
     private _socket: WebSocket | null;
-    private _context: AudioContext | null;
+    private _context!: AudioContext | null;
     private _sourceNode: MediaStreamAudioSourceNode | null;
     private _audioPromise: Promise<MediaStream> | null;
     private _dmp: any;
-    private _micStream: MediaStream | null;
-    private _newSocketCallback: any;
-    private _setupSocketCallback: any;
-    private _socketMessageCallback: any;
-    private _processAudioCallback: any;
-    private _onTranscriptionFromServer: any;
-    private _resetListening: any;
-    private _stopTranscription: any;
-    private _resetEdgeTriggerUtterance: any;
+    private _micStream!: MediaStream | null;
 
     constructor (runtime: any) {
         /**
@@ -194,7 +187,7 @@ class Scratch3Speech2TextBlocks {
      * @private
      */
     _scanBlocksForPhraseList () {
-        const words = [];
+        const words: string[] = [];
         // For each each target, walk through the top level blocks and check whether
         // they are speech hat/when I hear blocks.
         this.runtime.targets.forEach(target => {
@@ -472,7 +465,7 @@ class Scratch3Speech2TextBlocks {
      * @private
      */
     _resumeListening () {
-        this._context.resume.bind(this._context);
+        this._context!.resume.bind(this._context);
         this._newWebsocket();
     }
 
@@ -515,7 +508,7 @@ class Scratch3Speech2TextBlocks {
      */
     _initScriptNode () {
         // Create a node that sends raw bytes across the websocket
-        this._scriptNode = this._context.createScriptProcessor(4096, 1, 1);
+        this._scriptNode = this._context!.createScriptProcessor(4096, 1, 1);
     }
 
     /**
@@ -536,7 +529,7 @@ class Scratch3Speech2TextBlocks {
      * @private
      */
     _socketMessageCallback () {
-        this._socket.addEventListener('message', this._onTranscriptionFromServer);
+        this._socket!.addEventListener('message', this._onTranscriptionFromServer);
         this._startByteStream();
     }
 
@@ -563,18 +556,18 @@ class Scratch3Speech2TextBlocks {
         this._micStream = values[0];
         this._socket = values[1].target;
 
-        this._socket.addEventListener('error', e => {
+        this._socket!.addEventListener('error', e => {
             log.error(`Error from web socket: ${e}`);
         });
 
         // Send the initial configuration message. When the server acknowledges
         // it, start streaming the audio bytes to the server and listening for
         // transcriptions.
-        this._socket.addEventListener('message', this._socketMessageCallback, {once: true});
+        this._socket!.addEventListener('message', this._socketMessageCallback, {once: true});
         const langCode = this._getViewerLanguageCode();
-        this._socket.send(JSON.stringify(
+        this._socket!.send(JSON.stringify(
             {
-                sampleRate: this._context.sampleRate,
+                sampleRate: this._context!.sampleRate,
                 phrases: this._phraseList,
                 locale: langCode
             }
@@ -587,10 +580,10 @@ class Scratch3Speech2TextBlocks {
      */
     _startByteStream () {
         // Hook up the scriptNode to the mic
-        this._sourceNode = this._context.createMediaStreamSource(this._micStream);
-        this._sourceNode.connect(this._scriptNode);
-        this._scriptNode.addEventListener('audioprocess', this._processAudioCallback);
-        this._scriptNode.connect(this._context.destination);
+        this._sourceNode = this._context!.createMediaStreamSource(this._micStream!);
+        this._sourceNode.connect(this._scriptNode!);
+        this._scriptNode!.addEventListener('audioprocess', this._processAudioCallback);
+        this._scriptNode!.connect(this._context!.destination);
     }
 
     /**
@@ -600,9 +593,9 @@ class Scratch3Speech2TextBlocks {
      * @private
      */
     _processAudioCallback (e) {
-        if (this._socket.readyState === WebSocket.CLOSED ||
-        this._socket.readyState === WebSocket.CLOSING) {
-            log.error(`Not sending data because not in ready state. State: ${this._socket.readyState}`);
+        if (this._socket!.readyState === WebSocket.CLOSED ||
+        this._socket!.readyState === WebSocket.CLOSING) {
+            log.error(`Not sending data because not in ready state. State: ${this._socket!.readyState}`);
             // TODO: should we stop trying and reset state so it might work next time?
             return;
         }
@@ -610,7 +603,7 @@ class Scratch3Speech2TextBlocks {
         const floatSamples = e.inputBuffer.getChannelData(0);
         // The samples are floats in range [-1, 1]. Convert to 16-bit signed
         // integer.
-        this._socket.send(Int16Array.from(floatSamples.map(n => n * MAX_INT)));
+        this._socket!.send(Int16Array.from(floatSamples.map(n => n * MAX_INT)));
     }
 
     /**

@@ -23,7 +23,7 @@ class LogSystem extends EventEmitter {
      * Outputs a message to the web console.
      */
     log (...args: any[]): void {
-        log(...args);
+        log.log(...args);
     }
 
     /**

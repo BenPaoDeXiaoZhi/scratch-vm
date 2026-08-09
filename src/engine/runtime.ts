@@ -59,11 +59,11 @@ import VirtualMachine from "../virtual-machine";
 const _requestAnimationFrame =
   typeof requestAnimationFrame === "function"
     ? requestAnimationFrame
-    : ((f: Function) => setTimeout(f as any, 1000 / 60)) as any;
+    : (((f: Function) => setTimeout(f as any, 1000 / 60)) as any);
 const _cancelAnimationFrame =
   typeof cancelAnimationFrame === "function"
     ? cancelAnimationFrame
-    : ((handle: any) => clearTimeout(handle)) as any;
+    : (((handle: any) => clearTimeout(handle)) as any);
 
 // Type definitions for extension system
 type CategoryInfo = {
@@ -546,8 +546,9 @@ class Runtime extends EventEmitter {
   };
   compilerOptions: { enabled: boolean; warpTimer: boolean };
   ccwAPI: {
-    getOpenVM(): VirtualMachine | null;
-    getOnlineExtensionsConfig(): any
+    getOpenVM(): Partial<VirtualMachine>;
+    getOnlineExtensionsConfig(): any;
+    getExtensionURLById(id: string): Promise<string>;
   };
   waitingLoadAssetCallbackQueue: Function[];
   debug: boolean;
@@ -767,8 +768,18 @@ class Runtime extends EventEmitter {
      *
      */
     this.ccwAPI = {
-      getOpenVM: () => null,
-      getOnlineExtensionsConfig: () => undefined,
+      getOpenVM() {
+        debugger
+        return {}
+      },
+      getOnlineExtensionsConfig(){
+        debugger
+        return
+      },
+      async getExtensionURLById(id) {
+        debugger
+        return id
+      },
     };
 
     this.waitingLoadAssetCallbackQueue = [];
@@ -1538,7 +1549,7 @@ class Runtime extends EventEmitter {
    * @param {Target} [target] - the target to use as context. If a target is not provided, default to the current
    * editing target or the stage.
    */
-  makeMessageContextForTarget(target?: Target|null): any {
+  makeMessageContextForTarget(target?: Target | null): any {
     const context: any = {};
     target = target || this.getEditingTarget() || this.getTargetForStage()!;
     if (target) {
@@ -1725,11 +1736,14 @@ class Runtime extends EventEmitter {
         const xml =
           "<button " +
           `text="${xmlEscape(
-            maybeFormatMessage({
-              id: "gui.extensionLibrary.button.openDocs",
-              default: "Open Documentation",
-              description: "Button to open extensions docsURI",
-            }, null),
+            maybeFormatMessage(
+              {
+                id: "gui.extensionLibrary.button.openDocs",
+                default: "Open Documentation",
+                description: "Button to open extensions docsURI",
+              },
+              null,
+            ),
           )}" ` +
           'callbackKey="OPEN_DOCUMENTATION" ' +
           `callbackData="${xmlEscape(extensionInfo.docsURI)}"></button>`;
@@ -2251,7 +2265,10 @@ class Runtime extends EventEmitter {
    * @return {object} JSON blob for a scratch-blocks image field.
    * @private
    */
-  _constructInlineImageJson(argInfo: { dataURI?: string; flipRTL?: boolean }): object {
+  _constructInlineImageJson(argInfo: {
+    dataURI?: string;
+    flipRTL?: boolean;
+  }): object {
     if (!argInfo.dataURI) {
       log.warn("Missing data URI in extension block with argument type IMAGE");
     }
@@ -4076,7 +4093,7 @@ class Runtime extends EventEmitter {
    * @param {!string} monitorId ID of the monitor to remove.
    * @param {boolean} isRemoteOperation - set to true if this is a remote operation
    */
-  requestRemoveMonitor(monitorId: string, isRemoteOperation: boolean) {
+  requestRemoveMonitor(monitorId: string, isRemoteOperation?: boolean) {
     const deletedMonitor = this._monitorState.get(monitorId);
     if (deletedMonitor) {
       this._monitorState = this._monitorState.delete(monitorId);
@@ -4336,7 +4353,7 @@ class Runtime extends EventEmitter {
    * @param {Target} [sourceTarget] - the target used as a source for the new clone, if any.
    * @fires Runtime#targetWasCreated
    */
-  fireTargetWasCreated(newTarget: Target, sourceTarget: Target) {
+  fireTargetWasCreated(newTarget: Target, sourceTarget?: Target) {
     this.emit("targetWasCreated", newTarget, sourceTarget);
   }
 
@@ -4364,7 +4381,7 @@ class Runtime extends EventEmitter {
         return target;
       }
     }
-    return null
+    return null;
   }
 
   /**
@@ -4378,8 +4395,10 @@ class Runtime extends EventEmitter {
   getAllVarNamesOfType(varType: any): string[] {
     let varNames: string[] = [];
     for (const target of this.targets) {
-      const targetVarNames: string[] =
-        target.getAllVariableNamesInScopeByType(varType, true);
+      const targetVarNames: string[] = target.getAllVariableNamesInScopeByType(
+        varType,
+        true,
+      );
       varNames = varNames.concat(targetVarNames);
     }
     return varNames;
@@ -4542,7 +4561,13 @@ class Runtime extends EventEmitter {
     const formatMessage = globalFormatMessage.namespace();
     let lastLocale: globalFormatMessage.Locales | null = null;
     return (
-      msg: string,
+      msg:
+        | string
+        | {
+            id: string;
+            default: string;
+            description: string;
+          },
       args?: object,
       locales?: globalFormatMessage.Locales,
     ) => {

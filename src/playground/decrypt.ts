@@ -44,7 +44,6 @@ function decryptSb3(data: ArrayBufferLike, fileName: string) {
     return u8a.buffer;
   } else {
     const raw = new TextDecoder("Utf-8").decode(data);
-    console.log(raw);
     let key = CryptoJS.enc.Base64.parse("KzdnFCBRvq3" + fileName);
     key.sigBytes = 32;
     let iv = key.clone();

@@ -11,7 +11,7 @@ import VirtualMachine from "../virtual-machine";
 
 // output a Scratch Object contains APIs all extension needed
 
-let openVM: VirtualMachine | null = null;
+let openVM: any = null;
 let translate: any = null;
 
 const clearScratchAPI = () => {

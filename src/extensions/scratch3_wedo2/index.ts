@@ -129,12 +129,20 @@ const WeDo2Unit = {
  * Manage power, direction, and timers for one WeDo 2.0 motor.
  */
 class WeDo2Motor {
+    _parent: WeDo2;
+    _index: number;
+    _direction: number;
+    _power: number;
+    _isOn: boolean;
+    _pendingTimeoutId: ReturnType<typeof setTimeout> | null;
+    _pendingTimeoutStartTime: number | null;
+    _pendingTimeoutDelay: number | null;
     /**
      * Construct a WeDo 2.0 Motor instance.
      * @param {WeDo2} parent - the WeDo 2.0 peripheral which owns this motor.
      * @param {int} index - the zero-based index of this motor on its parent peripheral.
      */
-    constructor (parent, index) {
+    constructor (parent: WeDo2, index: number) {
         /**
          * The WeDo 2.0 peripheral which owns this motor.
          * @type {WeDo2}
@@ -285,7 +293,7 @@ class WeDo2Motor {
      * Turn this motor on for a specific duration.
      * @param {number} milliseconds - run the motor for this long.
      */
-    turnOnFor (milliseconds) {
+    turnOnFor (milliseconds: number) {
         if (this._power === 0) return;
 
         milliseconds = Math.max(0, milliseconds);
@@ -348,7 +356,7 @@ class WeDo2Motor {
      * @param {int} delay - wait this many milliseconds before calling the callback.
      * @private
      */
-    _setNewTimeout (callback, delay) {
+    _setNewTimeout (callback: () => void, delay: number | null) {
         this._clearTimeout();
         const timeoutID = setTimeout(() => {
             if (this._pendingTimeoutId === timeoutID) {
@@ -357,7 +365,7 @@ class WeDo2Motor {
                 this._pendingTimeoutDelay = null;
             }
             callback();
-        }, delay);
+        }, delay ?? 0);
         this._pendingTimeoutId = timeoutID;
         this._pendingTimeoutStartTime = Date.now();
         this._pendingTimeoutDelay = delay;
@@ -368,8 +376,16 @@ class WeDo2Motor {
  * Manage communication with a WeDo 2.0 peripheral over a Bluetooth Low Energy client socket.
  */
 class WeDo2 {
+    _runtime: any;
+    _extensionId: string;
+    _ports: (string | number)[];
+    _motors: (WeDo2Motor | null)[];
+    _sensors: { tiltX: number; tiltY: number; distance: number; };
+    _ble: any | null;
+    _rateLimiter: RateLimiter;
+    _batteryLevelIntervalId: number | null;
 
-    constructor (runtime, extensionId) {
+    constructor (runtime: any, extensionId: string) {
 
         /**
          * The Scratch 3.0 runtime used to trigger the green flag button.
@@ -464,8 +480,8 @@ class WeDo2 {
      * @param {int} index - the zero-based index of the desired motor.
      * @return {WeDo2Motor} - the WeDo2Motor instance, if any, at that index.
      */
-    motor (index) {
-        return this._motors[index];
+    motor (index: number) {
+        return this._motors[index] ?? null;
     }
 
     /**
@@ -487,7 +503,7 @@ class WeDo2 {
      * @param {int} inputRGB - a 24-bit RGB color in 0xRRGGBB format.
      * @return {Promise} - a promise of the completion of the set led send operation.
      */
-    setLED (inputRGB) {
+    setLED (inputRGB: number) {
         const rgb = [
             (inputRGB >> 16) & 0x000000FF,
             (inputRGB >> 8) & 0x000000FF,
@@ -540,7 +556,7 @@ class WeDo2 {
      * @param {int} milliseconds - the duration of the note, in milliseconds.
      * @return {Promise} - a promise of the completion of the play tone send operation.
      */
-    playTone (tone, milliseconds) {
+    playTone (tone: number, milliseconds: number) {
         const cmd = this.generateOutputCommand(
             WeDo2ConnectID.PIEZO,
             WeDo2Command.PLAY_TONE,
@@ -598,7 +614,7 @@ class WeDo2 {
      * Called by the runtime when user wants to connect to a certain WeDo 2.0 peripheral.
      * @param {number} id - the id of the peripheral to connect to.
      */
-    connect (id) {
+    connect (id: any) {
         if (this._ble) {
             this._ble.connectPeripheral(id);
         }
@@ -652,8 +668,8 @@ class WeDo2 {
      * @param {boolean} [useLimiter=true] - if true, use the rate limiter
      * @return {Promise} - a promise result of the write operation
      */
-    send (uuid, message, useLimiter = true) {
-        if (!this.isConnected()) return Promise.resolve();
+    send (uuid: string, message: number[] | Uint8Array, useLimiter = true) {
+        if (!this.isConnected() || !this._ble) return Promise.resolve();
 
         if (useLimiter) {
             if (!this._rateLimiter.okayToSend()) return Promise.resolve();
@@ -678,13 +694,12 @@ class WeDo2 {
      * @param  {array}  values    - the list of values to write to the command.
      * @return {array}            - a generated output command.
      */
-    generateOutputCommand (connectID, commandID, values = null) {
-        let command = [connectID, commandID];
+    generateOutputCommand (connectID: number, commandID: number, values: number[] | null = null) {
+        const command: number[] = [connectID, commandID];
         if (values) {
-            command = command.concat(
-                values.length
-            ).concat(
-                values
+            command.push(
+                values.length,
+                ...values
             );
         }
         return command;
@@ -706,7 +721,7 @@ class WeDo2 {
      * @param  {boolean} enableNotifications - whether to enable notifications.
      * @return {array}                       - a generated input command.
      */
-    generateInputCommand (connectID, type, mode, delta, units, enableNotifications) {
+    generateInputCommand (connectID: number, type: number, mode: number, delta: number, units: number, enableNotifications: boolean) {
         const command = [
             1, // Command ID = 1 = "Sensor Format"
             2, // Command Type = 2 = "Write"
@@ -729,6 +744,7 @@ class WeDo2 {
      * @private
      */
     _onConnect () {
+        if (!this._ble) return;
         this.setLEDMode();
         this.setLED(0x0000FF);
         this._ble.startNotifications(
@@ -744,7 +760,7 @@ class WeDo2 {
      * @param {object} base64 - the incoming BLE data.
      * @private
      */
-    _onMessage (base64) {
+    _onMessage (base64: string) {
         const data = Base64Util.base64ToUint8Array(base64);
         // log.info(data);
 
@@ -789,6 +805,7 @@ class WeDo2 {
      * close the socket.
      */
     _checkBatteryLevel () {
+        if (!this._ble) return;
         this._ble.read(
             BLEService.DEVICE_SERVICE,
             BLECharacteristic.LOW_VOLTAGE_ALERT,
@@ -804,14 +821,14 @@ class WeDo2 {
      * @param {number} type - the type ID of the sensor or motor
      * @private
      */
-    _registerSensorOrMotor (connectID, type) {
+    _registerSensorOrMotor (connectID: number, type: number) {
         // Record which port is connected to what type of device
         this._ports[connectID - 1] = type;
 
         // Record motor port
         if (type === WeDo2Device.MOTOR) {
             this._motors[connectID - 1] = new WeDo2Motor(this, connectID - 1);
-        } else {
+        } else if (this._ble) {
             // Set input format for tilt or distance sensor
             const typeString = type === WeDo2Device.DISTANCE ? 'DISTANCE' : 'TILT';
             const cmd = this.generateInputCommand(
@@ -837,7 +854,7 @@ class WeDo2 {
      * @param {number} connectID - the port to clear.
      * @private
      */
-    _clearPort (connectID) {
+    _clearPort (connectID: number) {
         const type = this._ports[connectID - 1];
         if (type === WeDo2Device.TILT) {
             this._sensors.tiltX = this._sensors.tiltY = 0;
@@ -890,6 +907,8 @@ const WeDo2TiltDirection = {
  * Scratch 3.0 blocks to interact with a LEGO WeDo 2.0 peripheral.
  */
 class Scratch3WeDo2Blocks {
+    runtime: any;
+    _peripheral: WeDo2;
 
     /**
      * @return {string} - the ID of this extension.
@@ -909,7 +928,7 @@ class Scratch3WeDo2Blocks {
      * Construct a set of WeDo 2.0 blocks.
      * @param {Runtime} runtime - the Scratch 3.0 runtime.
      */
-    constructor (runtime) {
+    constructor (runtime: any) {
         /**
          * The Scratch 3.0 runtime.
          * @type {Runtime}
@@ -1300,12 +1319,12 @@ class Scratch3WeDo2Blocks {
      * @property {int} DURATION - the amount of time to run the motors.
      * @return {Promise} - a promise which will resolve at the end of the duration.
      */
-    motorOnFor (args) {
+    motorOnFor (args: { DURATION: any; MOTOR_ID: any; }) {
         // TODO: cast args.MOTOR_ID?
         let durationMS = Cast.toNumber(args.DURATION) * 1000;
         durationMS = MathUtil.clamp(durationMS, 0, 15000);
-        return new Promise(resolve => {
-            this._forEachMotor(args.MOTOR_ID, motorIndex => {
+        return new Promise<void>(resolve => {
+            this._forEachMotor(args.MOTOR_ID, (motorIndex: any) => {
                 const motor = this._peripheral.motor(motorIndex);
                 if (motor) {
                     motor.turnOnFor(durationMS);
@@ -1323,16 +1342,16 @@ class Scratch3WeDo2Blocks {
      * @property {MotorID} MOTOR_ID - the motor(s) to activate.
      * @return {Promise} - a Promise that resolves after some delay.
      */
-    motorOn (args) {
+    motorOn (args: { MOTOR_ID: any; }) {
         // TODO: cast args.MOTOR_ID?
-        this._forEachMotor(args.MOTOR_ID, motorIndex => {
+        this._forEachMotor(args.MOTOR_ID, (motorIndex: any) => {
             const motor = this._peripheral.motor(motorIndex);
             if (motor) {
                 motor.turnOn();
             }
         });
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             window.setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -1345,16 +1364,16 @@ class Scratch3WeDo2Blocks {
      * @property {MotorID} MOTOR_ID - the motor(s) to deactivate.
      * @return {Promise} - a Promise that resolves after some delay.
      */
-    motorOff (args) {
+    motorOff (args: { MOTOR_ID: any; }) {
         // TODO: cast args.MOTOR_ID?
-        this._forEachMotor(args.MOTOR_ID, motorIndex => {
+        this._forEachMotor(args.MOTOR_ID, (motorIndex: any) => {
             const motor = this._peripheral.motor(motorIndex);
             if (motor) {
                 motor.turnOff();
             }
         });
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             window.setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -1368,9 +1387,9 @@ class Scratch3WeDo2Blocks {
      * @property {int} POWER - the new power level for the motor(s).
      * @return {Promise} - a Promise that resolves after some delay.
      */
-    startMotorPower (args) {
+    startMotorPower (args: { MOTOR_ID: any; POWER: any; }) {
         // TODO: cast args.MOTOR_ID?
-        this._forEachMotor(args.MOTOR_ID, motorIndex => {
+        this._forEachMotor(args.MOTOR_ID, (motorIndex: any) => {
             const motor = this._peripheral.motor(motorIndex);
             if (motor) {
                 motor.power = MathUtil.clamp(Cast.toNumber(args.POWER), 0, 100);
@@ -1378,7 +1397,7 @@ class Scratch3WeDo2Blocks {
             }
         });
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             window.setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -1393,9 +1412,9 @@ class Scratch3WeDo2Blocks {
      * @property {MotorDirection} MOTOR_DIRECTION - the new direction for the motor(s).
      * @return {Promise} - a Promise that resolves after some delay.
      */
-    setMotorDirection (args) {
+    setMotorDirection (args: { MOTOR_ID: any; MOTOR_DIRECTION: any; DIRECTION: any; }) {
         // TODO: cast args.MOTOR_ID?
-        this._forEachMotor(args.MOTOR_ID, motorIndex => {
+        this._forEachMotor(args.MOTOR_ID, (motorIndex: any) => {
             const motor = this._peripheral.motor(motorIndex);
             if (motor) {
                 switch (args.MOTOR_DIRECTION) {
@@ -1414,7 +1433,7 @@ class Scratch3WeDo2Blocks {
                 }
                 // keep the motor on if it's running, and update the pending timeout if needed
                 if (motor.isOn) {
-                    if (motor.pendingTimeoutDelay) {
+                    if (motor.pendingTimeoutDelay !== null && motor.pendingTimeoutStartTime !== null) {
                         motor.turnOnFor(motor.pendingTimeoutStartTime + motor.pendingTimeoutDelay - Date.now());
                     } else {
                         motor.turnOn();
@@ -1423,7 +1442,7 @@ class Scratch3WeDo2Blocks {
             }
         });
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             window.setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -1436,7 +1455,7 @@ class Scratch3WeDo2Blocks {
      * @property {number} HUE - the hue to set, in the range [0,100].
      * @return {Promise} - a Promise that resolves after some delay.
      */
-    setLightHue (args) {
+    setLightHue (args: { HUE: any; }) {
         // Convert from [0,100] to [0,360]
         let inputHue = Cast.toNumber(args.HUE);
         inputHue = MathUtil.wrapClamp(inputHue, 0, 100);
@@ -1448,7 +1467,7 @@ class Scratch3WeDo2Blocks {
 
         this._peripheral.setLED(rgbDecimal);
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             window.setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -1462,12 +1481,12 @@ class Scratch3WeDo2Blocks {
      * @property {number} DURATION - the duration of the note, in seconds.
      * @return {Promise} - a promise which will resolve at the end of the duration.
      */
-    playNoteFor (args) {
+    playNoteFor (args: { DURATION: any; NOTE: any; }) {
         let durationMS = Cast.toNumber(args.DURATION) * 1000;
         durationMS = MathUtil.clamp(durationMS, 0, 3000);
         const note = MathUtil.clamp(Cast.toNumber(args.NOTE), 25, 125); // valid WeDo 2.0 sounds
         if (durationMS === 0) return; // WeDo 2.0 plays duration '0' forever
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             const tone = this._noteToTone(note);
             this._peripheral.playTone(tone, durationMS);
 
@@ -1483,7 +1502,7 @@ class Scratch3WeDo2Blocks {
      * @property {number} REFERENCE - the value to compare against.
      * @return {boolean} - the result of the comparison, or false on error.
      */
-    whenDistance (args) {
+    whenDistance (args: { OP: any; REFERENCE: any; }) {
         switch (args.OP) {
         case '<':
             return this._peripheral.distance < Cast.toNumber(args.REFERENCE);
@@ -1501,7 +1520,7 @@ class Scratch3WeDo2Blocks {
      * @property {TiltDirection} TILT_DIRECTION_ANY - the tilt direction to test (up, down, left, right, or any).
      * @return {boolean} - true if the tilt sensor is tilted past a threshold in the specified direction.
      */
-    whenTilted (args) {
+    whenTilted (args: { TILT_DIRECTION_ANY: any; }) {
         return this._isTilted(args.TILT_DIRECTION_ANY);
     }
 
@@ -1518,7 +1537,7 @@ class Scratch3WeDo2Blocks {
      * @property {TiltDirection} TILT_DIRECTION_ANY - the tilt direction to test (up, down, left, right, or any).
      * @return {boolean} - true if the tilt sensor is tilted past a threshold in the specified direction.
      */
-    isTilted (args) {
+    isTilted (args: { TILT_DIRECTION_ANY: any; }) {
         return this._isTilted(args.TILT_DIRECTION_ANY);
     }
 
@@ -1528,7 +1547,7 @@ class Scratch3WeDo2Blocks {
      * @return {number} - the tilt sensor's angle in the specified direction.
      * Note that getTiltAngle(up) = -getTiltAngle(down) and getTiltAngle(left) = -getTiltAngle(right).
      */
-    getTiltAngle (args) {
+    getTiltAngle (args: { TILT_DIRECTION: any; }) {
         return this._getTiltAngle(args.TILT_DIRECTION);
     }
 
@@ -1538,7 +1557,7 @@ class Scratch3WeDo2Blocks {
      * @return {boolean} - true if the tilt sensor is tilted past a threshold in the specified direction.
      * @private
      */
-    _isTilted (direction) {
+    _isTilted (direction: any) {
         switch (direction) {
         case WeDo2TiltDirection.ANY:
             return this._getTiltAngle(WeDo2TiltDirection.UP) >= Scratch3WeDo2Blocks.TILT_THRESHOLD ||
@@ -1556,7 +1575,7 @@ class Scratch3WeDo2Blocks {
      * Note that getTiltAngle(up) = -getTiltAngle(down) and getTiltAngle(left) = -getTiltAngle(right).
      * @private
      */
-    _getTiltAngle (direction) {
+    _getTiltAngle (direction: string) {
         switch (direction) {
         case WeDo2TiltDirection.UP:
             return this._peripheral.tiltY > 45 ? 256 - this._peripheral.tiltY : -this._peripheral.tiltY;
@@ -1568,6 +1587,7 @@ class Scratch3WeDo2Blocks {
             return this._peripheral.tiltX > 45 ? this._peripheral.tiltX - 256 : this._peripheral.tiltX;
         default:
             log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
+            return 0;
         }
     }
 
@@ -1577,8 +1597,8 @@ class Scratch3WeDo2Blocks {
      * @param {Function} callback - the function to call with the numeric motor index for each motor.
      * @private
      */
-    _forEachMotor (motorID, callback) {
-        let motors;
+    _forEachMotor (motorID: string, callback: (motorIndex: number) => void) {
+        let motors: number[];
         switch (motorID) {
         case WeDo2MotorLabel.A:
             motors = [0];
@@ -1605,7 +1625,7 @@ class Scratch3WeDo2Blocks {
      * @return {number} - the frequency, in Hz, corresponding to that MIDI note value.
      * @private
      */
-    _noteToTone (midiNote) {
+    _noteToTone (midiNote: number) {
         // Note that MIDI note 69 is A4, 440 Hz
         return 440 * Math.pow(2, (midiNote - 69) / 12);
     }

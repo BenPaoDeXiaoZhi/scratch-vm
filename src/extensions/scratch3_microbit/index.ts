@@ -2,7 +2,6 @@ import ArgumentType from '../../extension-support/argument-type';
 import BlockType from '../../extension-support/block-type';
 import log from '../../util/log';
 import cast from '../../util/cast';
-// @ts-expect-error
 import formatMessage from 'format-message';
 import BLE from '../../io/ble';
 import Base64Util from '../../util/base64-util';
@@ -60,6 +59,27 @@ const BLEUUID = {
  * Manage communication with a MicroBit peripheral over a Scrath Link client socket.
  */
 class MicroBit {
+    _runtime: any;
+    _ble: any | null;
+    _extensionId: string;
+    _sensors: {
+        tiltX: number;
+        tiltY: number;
+        buttonA: number;
+        buttonB: number;
+        touchPins: number[];
+        gestureState: number;
+        ledMatrixState: Uint8Array;
+    };
+    _gestures: {
+        moving: boolean;
+        move: { active: boolean; timeout: boolean; };
+        shake: { active: boolean; timeout: boolean; };
+        jump: { active: boolean; timeout: boolean; };
+    };
+    _timeoutID: number | null;
+    _busy: boolean;
+    _busyTimeoutID: number | null;
 
     /**
      * Construct a MicroBit communication object.
@@ -251,7 +271,7 @@ class MicroBit {
      */
     reset () {
         if (this._timeoutID) {
-            window.clearTimeout(this._timeoutID);
+            window.clearTimeout(this._timeoutID ?? undefined);
             this._timeoutID = null;
         }
     }
@@ -299,7 +319,7 @@ class MicroBit {
         this._ble.write(BLEUUID.service, BLEUUID.txChar, data, 'base64', true).then(
             () => {
                 this._busy = false;
-                window.clearTimeout(this._busyTimeoutID);
+                window.clearTimeout(this._busyTimeoutID ?? undefined);
             }
         );
     }
@@ -340,7 +360,7 @@ class MicroBit {
         this._sensors.gestureState = data[9];
 
         // cancel disconnect timeout and start a new one
-        window.clearTimeout(this._timeoutID);
+        window.clearTimeout(this._timeoutID ?? undefined);
         this._timeoutID = window.setTimeout(
             () => this._ble.handleDisconnectError(BLEDataStoppedError),
             BLETimeout
@@ -406,6 +426,8 @@ const MicroBitPinState = {
  * Scratch 3.0 blocks to interact with a MicroBit peripheral.
  */
 class Scratch3MicroBitBlocks {
+    runtime: any;
+    _peripheral: MicroBit;
 
     /**
      * @return {string} - the name of this extension.
@@ -855,7 +877,7 @@ class Scratch3MicroBitBlocks {
             this._peripheral.displayMatrix(this._peripheral.ledMatrixState);
         }
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -877,7 +899,7 @@ class Scratch3MicroBitBlocks {
         if (text.length > 0) this._peripheral.displayText(text);
         const yieldDelay = 120 * ((6 * text.length) + 6);
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             setTimeout(() => {
                 resolve();
             }, yieldDelay);
@@ -894,7 +916,7 @@ class Scratch3MicroBitBlocks {
         }
         this._peripheral.displayMatrix(this._peripheral.ledMatrixState);
 
-        return new Promise(resolve => {
+        return new Promise<void>(resolve => {
             setTimeout(() => {
                 resolve();
             }, BLESendInterval);
@@ -965,6 +987,7 @@ class Scratch3MicroBitBlocks {
             return Math.round(this._peripheral.tiltX / 10);
         default:
             log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
+            return 0;
         }
     }
 

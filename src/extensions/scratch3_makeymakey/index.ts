@@ -1,4 +1,3 @@
-// @ts-expect-error
 import formatMessage from 'format-message';
 import ArgumentType from '../../extension-support/argument-type';
 import BlockType from '../../extension-support/block-type';
@@ -65,6 +64,11 @@ const SCRATCH_KEY_NAME = {
  * @constructor
  */
 class Scratch3MakeyMakeyBlocks {
+    runtime: any;
+    frameToggle: boolean;
+    sequences: Record<string, { array: string[]; completed: boolean; }>;
+    keyPressBuffer: string[];
+
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.

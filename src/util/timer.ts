@@ -57,7 +57,7 @@ class Timer {
     static get nowObj () {
         if (Timer.USE_PERFORMANCE && typeof self !== 'undefined' && self.performance && 'now' in self.performance) {
             return self.performance;
-        } else if (Date.now) {
+        } else {
             return Date;
         }
         return Timer.legacyDateCode;

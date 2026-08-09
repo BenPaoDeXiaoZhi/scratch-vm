@@ -484,7 +484,7 @@ const handleCostumeLoadError = function (
 const loadCostumeFromAsset = function (
   costume: any,
   runtime: any,
-  optVersion: number | null,
+  optVersion?: number | null,
 ): Promise<any> {
   costume.id = costume.id || uid();
   costume.assetId = costume.asset.assetId;

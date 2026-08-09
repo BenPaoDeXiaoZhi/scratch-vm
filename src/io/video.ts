@@ -2,7 +2,7 @@ import StageLayering from "../engine/stage-layering";
 
 class Video {
   runtime: any;
-  mirror: boolean;
+  mirror: boolean=false;
   /**
    * @typedef VideoProvider
    * @property {Function} enableVideo - Requests camera access from the user, and upon success,
@@ -92,9 +92,9 @@ class Video {
   /**
    * Dimensions the video stream is analyzed at after its rendered to the
    * sample canvas.
-   * @type {Array.<number>}
+   * @type {[number, number]}
    */
-  static get DIMENSIONS() {
+  static get DIMENSIONS(): [number, number] {
     return [480, 360];
   }
 

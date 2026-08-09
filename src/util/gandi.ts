@@ -19,7 +19,7 @@ class Gandi {
    */
   _supportedAssetTypes: any[];
 
-  assets: any[];
+  assets: any[] = [];
   wildExtensions: any;
   configs: any;
   dynamicMenuItems: any;
@@ -239,7 +239,7 @@ class Gandi {
     let gandiObj;
     const hasSpine = extensions.has("GandiSpineSkeleton");
     const usedExt = {};
-    Object.values(this.wildExtensions).forEach((ext) => {
+    Object.values<{id:string}>(this.wildExtensions).forEach((ext) => {
       if (extensions.has(ext.id)) {
         usedExt[ext.id] = ext;
       }

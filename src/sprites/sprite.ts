@@ -6,8 +6,17 @@ import newBlockIds from '../util/new-block-ids';
 import StringUtil from '../util/string-util';
 import StageLayering from '../engine/stage-layering';
 import Frames from '../engine/frame';
+import type Runtime from '../engine/runtime';
 
 class Sprite {
+    runtime: Runtime;
+    blocks: Blocks;
+    frames: Frames;
+    name: string;
+    costumes_: any[];
+    sounds: any[];
+    clones: RenderedTarget[];
+    soundBank: any;
     /**
      * Sprite to be used on the Scratch stage.
      * All clones of a sprite have shared blocks, shared costumes, shared variables,
@@ -17,7 +26,7 @@ class Sprite {
      * @param {?Frames} frames Shared frames object for all clones of sprite.
      * @constructor
      */
-    constructor (blocks, runtime, frames) {
+    constructor (blocks: Blocks | null, runtime: Runtime, frames?: Frames | null) {
         this.runtime = runtime;
         if (!blocks) {
             // Shared set of blocks for all clones.
@@ -67,7 +76,7 @@ class Sprite {
      * Add an array of costumes, taking care to avoid duplicate names.
      * @param {!Array<object>} costumes Array of objects representing costumes.
      */
-    set costumes (costumes) {
+    set costumes (costumes: Array<object>) {
         this.costumes_ = [];
         for (const costume of costumes) {
             this.addCostumeAt(costume, this.costumes_.length);
@@ -80,7 +89,7 @@ class Sprite {
      *     mutate the list on the sprite. The sprite list should be mutated by calling
      *     addCostumeAt, deleteCostumeAt, or setting costumes.
      */
-    get costumes () {
+    get costumes (): object[] {
         return this.costumes_;
     }
 
@@ -89,7 +98,7 @@ class Sprite {
      * @param {!object} costumeObject Object representing the costume.
      * @param {!int} index Index at which to add costume
      */
-    addCostumeAt (costumeObject, index) {
+    addCostumeAt (costumeObject: any, index: number) {
         if (!costumeObject.name) {
             costumeObject.name = '';
         }
@@ -103,7 +112,7 @@ class Sprite {
      * @param {number} index Costume index to be deleted
      * @return {?object} The deleted costume
      */
-    deleteCostumeAt (index) {
+    deleteCostumeAt (index: number): object | null {
         return this.costumes.splice(index, 1)[0];
     }
 
@@ -113,7 +122,7 @@ class Sprite {
      * Defaults to the sprite layer group
      * @returns {!RenderedTarget} Newly created clone.
      */
-    createClone (optLayerGroup) {
+    createClone (optLayerGroup: string | undefined): RenderedTarget {
         const newClone = new RenderedTarget(this, this.runtime);
         newClone.isOriginal = this.clones.length === 0;
         this.clones.push(newClone);
@@ -134,7 +143,7 @@ class Sprite {
      * In particular, the clone's dispose() method is not called.
      * @param {!RenderedTarget} clone - the clone to be removed.
      */
-    removeClone (clone) {
+    removeClone (clone: RenderedTarget) {
         this.runtime.fireTargetWasRemoved(clone);
         const cloneIndex = this.clones.indexOf(clone);
         if (cloneIndex >= 0) {
@@ -168,7 +177,7 @@ class Sprite {
         const allNames = this.runtime.targets.map(t => t.sprite.name);
         newSprite.name = StringUtil.unusedName(this.name, allNames);
 
-        const assetPromises = [];
+        const assetPromises: Promise<any>[] = [];
 
         newSprite.costumes = this.costumes_.map(costume => {
             const newCostume = Object.assign({}, costume);

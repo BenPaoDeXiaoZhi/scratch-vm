@@ -152,6 +152,11 @@ const _videoMotionViewComponentsTmp = {
  * @constructor
  */
 class VideoMotionView {
+    motion: any;
+    canvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D | null;
+    output: number;
+    buffer: Uint32Array<ArrayBuffer>;
     constructor (motion, output = OUTPUT.XYT) {
         /**
          * VideoMotion instance to visualize.
@@ -502,7 +507,7 @@ class VideoMotionView {
         }
 
         const data = new ImageData(new Uint8ClampedArray(this.buffer.buffer), WIDTH, HEIGHT);
-        this.context.putImageData(data, 0, 0);
+        this.context!.putImageData(data, 0, 0);
     }
 }
 

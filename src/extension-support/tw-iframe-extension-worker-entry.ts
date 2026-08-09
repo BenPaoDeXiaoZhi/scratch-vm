@@ -26,7 +26,7 @@ context.centralDispatchService = {
             window.parent.postMessage(data, '*');
         }
     }
-};
+} as any;
 
 window.parent.postMessage({
     vmIframeId: id,

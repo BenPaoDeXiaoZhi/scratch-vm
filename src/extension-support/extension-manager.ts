@@ -1,8 +1,6 @@
-//@ts-nocheck
 import dispatch from "../dispatch/central-dispatch";
 import log from "../util/log";
 import maybeFormatMessage from "../util/maybe-format-message";
-import formatMessage from "format-message";
 import BlockType from "./block-type";
 import { withScratchAPI, createdScriptLoader } from "./extension-load-helper";
 import SecurityManager from "./tw-security-manager";
@@ -10,7 +8,6 @@ import ExtensionWorker from "./extension-worker?worker";
 import coreExample from "../blocks/scratch3_core_example";
 import pen from "../extensions/scratch3_pen";
 import wedo2 from "../extensions/scratch3_wedo2";
-import music from "../extensions/scratch3_music";
 import microbit from "../extensions/scratch3_microbit";
 import text2speech from "../extensions/scratch3_text2speech";
 import translate from "../extensions/scratch3_translate";
@@ -20,6 +17,14 @@ import makeymakey from "../extensions/scratch3_makeymakey";
 import boost from "../extensions/scratch3_boost";
 import gdxfor from "../extensions/scratch3_gdx_for";
 import tw from "../extensions/tw";
+import type {
+  ExtensionBlockMetadata,
+  ExtensionMenuMetadata,
+  ExtensionMetadata,
+  MenuInfo,
+} from "./extension-metadata";
+import type VirtualMachine from "../virtual-machine";
+import type Runtime from "../engine/runtime";
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
 // TODO: move these out into a separate repository?
@@ -77,13 +82,13 @@ const reservedExtId = [
   "Gandi",
 ];
 
-interface ConvertedBlockInfo {
+export interface ConvertedBlockInfo {
   info: ExtensionBlockMetadata;
   json: object;
   xml: string;
 }
 
-interface CategoryInfo {
+export interface CategoryInfo {
   id: string;
   name: string;
   blockIconURI: string | undefined;
@@ -94,13 +99,13 @@ interface CategoryInfo {
   menus: Array<object>;
 }
 
-interface PendingExtensionWorker {
+export interface PendingExtensionWorker {
   extensionURL: string;
   resolve: Function;
   reject: Function;
 }
 
-const createExtensionService = (extensionManager) => {
+const createExtensionService = (extensionManager: ExtensionManager) => {
   const service: any = {};
   service.registerExtensionServiceSync =
     extensionManager.registerExtensionServiceSync.bind(extensionManager);
@@ -113,7 +118,7 @@ const createExtensionService = (extensionManager) => {
 };
 
 // check if func is a class
-const isConstructor = (value) => {
+const isConstructor = (value: any) => {
   try {
     // eslint-disable-next-line no-new
     new new Proxy(value, {
@@ -129,20 +134,31 @@ const isConstructor = (value) => {
 
 class ExtensionManager {
   nextExtensionWorker: number;
-  pendingExtensions: never[];
-  pendingWorkers: Worker[];
+  pendingExtensions: {
+    extensionURL: string;
+    resolve: (value: unknown) => void;
+    reject: (reason?: any) => void;
+  }[];
+  pendingWorkers: {
+    extensionURL: string;
+    resolve: (value?: unknown) => void;
+    reject: (reason?: any) => void;
+  }[];
   workerURLs: string[];
   _loadedExtensions: Map<any, any>;
   securityManager: SecurityManager;
-  vm: any;
+  vm: VirtualMachine;
   showCompatibilityWarning: boolean;
-  runtime: any;
-  _gandiExternalExtensionServices: never[];
+  runtime: Runtime;
+  _gandiExternalExtensionServices: string[];
   _gandiExternalExtensionServicesLoaded: boolean;
   loadingAsyncExtensions: number;
-  asyncExtensionsLoadedCallbacks: never[];
-  _customExtensionInfo: {};
-  _officialExtensionInfo: {};
+  asyncExtensionsLoadedCallbacks: {
+    resolve: (value?: any) => void;
+    reject: (reason?: any) => void;
+  }[];
+  _customExtensionInfo: Record<string, any>;
+  _officialExtensionInfo: Record<string, any>;
   builtinExtensions: {
     // This is an example that isn't loaded with the other core blocks,
     // but serves as a reference for loading core blocks as extensions.
@@ -163,8 +179,8 @@ class ExtensionManager {
     // tw: core extension
     tw: () => typeof tw;
   };
-  workerMode: string;
-  constructor(vm) {
+  workerMode: string = "";
+  constructor(vm: VirtualMachine) {
     /**
      * The ID number to provide to the next extension worker.
      * @type {int}
@@ -261,7 +277,7 @@ class ExtensionManager {
     return this._loadedExtensions.has(extensionID);
   }
 
-  setLoadedExtension(extensionID, value) {
+  setLoadedExtension(extensionID: string, value: any) {
     const extInfo =
       this._customExtensionInfo[extensionID] ||
       this._officialExtensionInfo[extensionID];
@@ -271,7 +287,11 @@ class ExtensionManager {
     this._loadedExtensions.set(extensionID, value);
   }
 
-  registerExtension(extensionId, extension, shouldReplace = false) {
+  registerExtension(
+    extensionId: string,
+    extension: any,
+    shouldReplace = false,
+  ) {
     const loadedExtServiceName = this._loadedExtensions.get(extensionId);
     if (loadedExtServiceName && !shouldReplace) {
       const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
@@ -288,7 +308,7 @@ class ExtensionManager {
       ); //This can get menus from extension. It's an array of menus' names.
       const incomingOpsSet = new Set(
         incomingBlocks
-          .map((b) => b.opcode)
+          .map((b: { opcode: any }) => b.opcode)
           .concat(incomingMenus.map((m) => `menu_${m}`)),
       );
       const opsInUseSet = new Set(
@@ -317,19 +337,20 @@ class ExtensionManager {
         "getInfo",
       ).blocks;
       // block type check
-      const typeChangedBlocks = oldBlocks.filter((a) =>
-        incomingBlocks.find(
-          (b) =>
-            opsInUseSet.has(a.opcode) &&
-            a.opcode === b.opcode &&
-            a.blockType !== b.blockType,
-        ),
+      const typeChangedBlocks = oldBlocks.filter(
+        (a: { opcode: any; blockType: any }) =>
+          incomingBlocks.find(
+            (b: { opcode: any; blockType: any }) =>
+              opsInUseSet.has(a.opcode) &&
+              a.opcode === b.opcode &&
+              a.blockType !== b.blockType,
+          ),
       );
       if (typeChangedBlocks.length > 0) {
         throw new Error(`extension replace fail id = ${extensionId}`, {
           cause: {
             code: "BLOCK_TYPE_CHANGED",
-            values: typeChangedBlocks.map((b) => b.opcode),
+            values: typeChangedBlocks.map((b: { opcode: any }) => b.opcode),
           },
         });
       }
@@ -415,11 +436,11 @@ class ExtensionManager {
     return this.registerExtension(extensionId, extension);
   }
 
-  addBuiltinExtension(extensionId, extensionClass) {
+  addBuiltinExtension(extensionId: string | number, extensionClass: any) {
     this.builtinExtensions[extensionId] = () => extensionClass;
   }
 
-  _isValidExtensionURL(extensionURL) {
+  _isValidExtensionURL(extensionURL: string | URL) {
     try {
       const parsedURL = new URL(extensionURL);
       return (
@@ -503,7 +524,7 @@ class ExtensionManager {
       this.pendingExtensions.push({ extensionURL, resolve, reject });
       this.createExtensionWorker()
         .then((worker) => dispatch.addWorker(worker))
-        .then(extensionURL)
+        .then((extensionURL) => extensionURL)
         .catch((_error) => {
           this.runtime.emit("EXTENSION_NOT_FOUND", extensionURL);
           log.error(_error);
@@ -600,7 +621,7 @@ class ExtensionManager {
 
   allocateWorker() {
     const id = this.nextExtensionWorker++;
-    const workerInfo = this.pendingExtensions.shift();
+    const workerInfo = this.pendingExtensions.shift()!;
     this.pendingWorkers[id] = workerInfo;
     this.workerURLs[id] = workerInfo.extensionURL;
     return [id, workerInfo.extensionURL];
@@ -635,7 +656,7 @@ class ExtensionManager {
     }
   }
 
-  _failedLoadingExtensionScript(error) {
+  _failedLoadingExtensionScript(error: any) {
     // Don't set the current extension counter to 0, otherwise it will go negative if another
     // extension finishes or fails to load.
     this.loadingAsyncExtensions--;
@@ -666,7 +687,7 @@ class ExtensionManager {
    * @param {object} extensionObject - the extension object to register
    * @returns {string} The name of the registered extension service
    */
-  _registerInternalExtension(extensionObject: object): string {
+  _registerInternalExtension(extensionObject: any): string {
     const extensionInfo = extensionObject.getInfo();
     const fakeWorkerId = this.nextExtensionWorker++;
     const serviceName = `extension_${fakeWorkerId}_${extensionInfo.id}`;
@@ -685,7 +706,10 @@ class ExtensionManager {
    * @param {ExtensionInfo} extensionInfo - the extension's metadata
    * @private
    */
-  _registerExtensionInfo(serviceName: string, extensionInfo: ExtensionInfo) {
+  _registerExtensionInfo(
+    serviceName: string,
+    extensionInfo: ExtensionMetadata,
+  ) {
     extensionInfo = this._prepareExtensionInfo(serviceName, extensionInfo);
     dispatch
       .call("runtime", "_registerExtensionPrimitives", extensionInfo)
@@ -707,8 +731,8 @@ class ExtensionManager {
    */
   _prepareExtensionInfo(
     serviceName: string,
-    extensionInfo: ExtensionInfo,
-  ): ExtensionInfo {
+    extensionInfo: ExtensionMetadata,
+  ): ExtensionMetadata {
     extensionInfo = Object.assign({}, extensionInfo);
     // Allowed ID characters are those matching the regular expression [\w-.]: A-Z, a-z, 0-9, hyphen ("-") and dot (".") .
     if (/[^\w-.]/i.test(extensionInfo.id)) {
@@ -733,25 +757,31 @@ class ExtensionManager {
     extensionInfo.name = extensionInfo.name || extensionInfo.id;
     extensionInfo.blocks = extensionInfo.blocks || [];
     extensionInfo.targetTypes = extensionInfo.targetTypes || [];
-    extensionInfo.blocks = extensionInfo.blocks.reduce((results, blockInfo) => {
-      try {
-        let result;
-        if (typeof blockInfo === "string" && blockInfo.startsWith("---")) {
-          result = blockInfo;
-        } else {
-          result = this._prepareBlockInfo(serviceName, blockInfo);
+    extensionInfo.blocks = extensionInfo.blocks.reduce(
+      (results: (string | ExtensionBlockMetadata)[], blockInfo) => {
+        try {
+          let result: string | ExtensionBlockMetadata;
+          if (typeof blockInfo === "string" && blockInfo.startsWith("---")) {
+            result = blockInfo;
+          } else {
+            result = this._prepareBlockInfo(
+              serviceName,
+              blockInfo as ExtensionBlockMetadata,
+            );
+          }
+          results.push(result);
+        } catch (e) {
+          // TODO: more meaningful error reporting
+          log.error(
+            `Error processing block: ${
+              (e as Error).message
+            }, Block:\n${JSON.stringify(blockInfo)}`,
+          );
         }
-        results.push(result);
-      } catch (e) {
-        // TODO: more meaningful error reporting
-        log.error(
-          `Error processing block: ${
-            e.message
-          }, Block:\n${JSON.stringify(blockInfo)}`,
-        );
-      }
-      return results;
-    }, []);
+        return results;
+      },
+      [],
+    );
     extensionInfo.menus = extensionInfo.menus || {};
     extensionInfo.menus = this._prepareMenuInfo(
       serviceName,
@@ -769,8 +799,8 @@ class ExtensionManager {
    */
   _prepareMenuInfo(
     serviceName: string,
-    menus: Array<MenuInfo>,
-  ): Array<MenuInfo> {
+    menus: Record<string, MenuInfo>,
+  ): Record<string, MenuInfo> {
     const menuNames = Object.getOwnPropertyNames(menus);
     for (let i = 0; i < menuNames.length; i++) {
       const menuName = menuNames[i];
@@ -780,7 +810,7 @@ class ExtensionManager {
       // its items listed in an `items` property.
       if (!menuInfo.items) {
         menuInfo = {
-          items: menuInfo,
+          items: menuInfo as unknown as string[],
         };
         menus[menuName] = menuInfo;
       }
@@ -825,7 +855,7 @@ class ExtensionManager {
       .call(extensionObject, editingTargetID)
       // add dynamic menu items from gandi, such as custom skeleton or async asset
       .concat(this.runtime.gandi.dynamicMenuItems[menuItemFunctionName] ?? [])
-      .map((item) => {
+      .map((item: { text: any; value: any }) => {
         item = maybeFormatMessage(item, extensionMessageContext);
         switch (typeof item) {
           case "object":
@@ -892,7 +922,7 @@ class ExtensionManager {
           );
         }
         blockInfo.callFunc = () => {
-          dispatch.call(serviceName, blockInfo.func);
+          dispatch.call(serviceName, blockInfo.func as string);
         };
         break;
       case BlockType.LABEL:
@@ -907,14 +937,15 @@ class ExtensionManager {
           throw new Error("Missing opcode for block");
         }
 
-        const funcName = blockInfo.func || blockInfo.opcode;
+        const funcName = (blockInfo.func as string) || blockInfo.opcode;
 
         const getBlockInfo = blockInfo.isDynamic
-          ? (args) => args && args.mutation && args.mutation.blockInfo
+          ? (args: { mutation: { blockInfo: any } }) =>
+              args && args.mutation && args.mutation.blockInfo
           : () => blockInfo;
         const callBlockFunc = (() => {
           if (dispatch._isRemoteService(serviceName)) {
-            return (args, util, realBlockInfo) =>
+            return (args: any, util: any, realBlockInfo: any) =>
               dispatch
                 .call(serviceName, funcName, args, util, realBlockInfo)
                 .then((result) => {
@@ -941,7 +972,7 @@ class ExtensionManager {
             );
           }
 
-          return (args, util, realBlockInfo) => {
+          return (args: any, util: any, realBlockInfo: any) => {
             if (serviceObject[funcName]) {
               return serviceObject[funcName](args, util, realBlockInfo);
             }
@@ -951,7 +982,7 @@ class ExtensionManager {
           };
         })();
 
-        blockInfo.func = (args, util) => {
+        blockInfo.func = (args: any, util: any) => {
           const realBlockInfo = getBlockInfo(args);
           // TODO: filter args using the keys of realBlockInfo.arguments? maybe only if sandboxed?
           return callBlockFunc(args, util, realBlockInfo);
@@ -974,11 +1005,11 @@ class ExtensionManager {
     if (this.runtime.gandi.isExtensionURLInGandiAssets(url)) {
       const extInfo =
         this._customExtensionInfo[id] || this._officialExtensionInfo[id];
-      extInfo.replaceable = true;
+      (extInfo as any).replaceable = true;
     }
   }
 
-  loadExternalExtensionById(extensionId, shouldReplace = false) {
+  loadExternalExtensionById(extensionId: string, shouldReplace = false) {
     if (this.isExtensionLoaded(extensionId) && !shouldReplace) {
       // avoid init extension twice if it already loaded
       return;
@@ -991,7 +1022,7 @@ class ExtensionManager {
     });
   }
 
-  isValidExtensionURL(extensionURL) {
+  isValidExtensionURL(extensionURL: string | URL) {
     try {
       const parsedURL = new URL(extensionURL);
       return parsedURL.protocol === "https:" || parsedURL.protocol === "http:";
@@ -1000,11 +1031,11 @@ class ExtensionManager {
     }
   }
 
-  injectExtension(extensionId, extension) {
+  injectExtension(extensionId: string | number, extension: any) {
     this.builtinExtensions[extensionId] = () => extension;
   }
 
-  isExternalExtension(extensionId) {
+  isExternalExtension(extensionId: string) {
     return (
       Object.hasOwnProperty.call(officialExtension, extensionId) ||
       Object.hasOwnProperty.call(customExtension, extensionId)
@@ -1015,7 +1046,12 @@ class ExtensionManager {
     this._loadedExtensions.clear();
   }
 
-  addOfficialExtensionInfo(obj) {
+  addOfficialExtensionInfo(obj: {
+    Extension: () => Promise<any>;
+    info: {
+      extensionId: string;
+    };
+  }) {
     const { Extension, ...ext } = obj;
     const extensionId = ext.info && ext.info.extensionId;
     if (!extensionId) {
@@ -1026,7 +1062,10 @@ class ExtensionManager {
     officialExtension[extensionId] = Extension;
   }
 
-  addCustomExtensionInfo(obj, url) {
+  addCustomExtensionInfo(
+    obj: Record<string, any>,
+    url: string,
+  ) {
     const { Extension, ...ext } = obj;
     const extensionId = ext.info && ext.info.extensionId;
     if (!extensionId) {
@@ -1048,14 +1087,14 @@ class ExtensionManager {
     }
   }
 
-  updateExternalExtensionConstructor(extensionId, func) {
+  updateExternalExtensionConstructor(extensionId: string | number, func: any) {
     // only exts from gandi ext service need update constructor when it is a IIFE
     if (officialExtension[extensionId]) {
       officialExtension[extensionId] = func;
     }
   }
 
-  async getExternalExtensionConstructor(extensionId) {
+  async getExternalExtensionConstructor(extensionId: string | number) {
     const externalExt = {
       ...officialExtension,
       ...customExtension,
@@ -1115,8 +1154,8 @@ class ExtensionManager {
     shouldReplace: boolean = false,
     disallowIIFERegister: boolean = false,
   ): Promise<{ onlyAdded: string[]; addedAndLoaded: string[] }> {
-    const onlyAdded = [];
-    const addedAndLoaded = []; // exts use Scratch.extensions.register
+    const onlyAdded: string[] = [];
+    const addedAndLoaded: string[] = []; // exts use Scratch.extensions.register
     const rewritten = await this.securityManager.rewriteExtensionURL(url);
     return (
       withScratchAPI(
@@ -1133,7 +1172,7 @@ class ExtensionManager {
                       ({ extensionObject, extensionInstance }) => {
                         this.addCustomExtensionInfo(extensionObject, url);
                         if (disallowIIFERegister) {
-                          onlyAdded.push(extensionObject.info.extensionId);
+                          onlyAdded.push(extensionObject.info.extensionId as string);
                         } else {
                           this.registerExtension(
                             extensionObject.info.extensionId,
@@ -1166,7 +1205,7 @@ class ExtensionManager {
                     // for Gandi extension service
                     const { default: lib } =
                       await global.scratchExtensions.default();
-                    Object.entries(lib).forEach(([key, obj]) => {
+                    Object.entries<any>(lib).forEach(([key, obj]) => {
                       if (!(obj.info && obj.info.extensionId)) {
                         // compatible with some legacy gandi extension service
                         obj.info = obj.info || {};
@@ -1226,7 +1265,7 @@ class ExtensionManager {
     return loadURLs;
   }
 
-  deleteExtensionById(extensionId) {
+  deleteExtensionById(extensionId: string) {
     const inUseBlockOps = new Set(
       this.runtime.targets
         .map(({ blocks }) => Object.values(blocks._blocks).map((b) => b.opcode))
@@ -1255,8 +1294,10 @@ class ExtensionManager {
     // delete monitor if extension has
     this.runtime
       .getMonitorState()
-      .filter((monitorData) => monitorData.opcode.startsWith(`${extensionId}_`))
-      .forEach((monitorData) => {
+      .filter((monitorData: { opcode: string }) =>
+        monitorData.opcode.startsWith(`${extensionId}_`),
+      )
+      .forEach((monitorData: { id: string }) => {
         this.runtime.monitorBlocks.deleteBlock(monitorData.id);
         this.runtime.requestRemoveMonitor(monitorData.id);
       });
@@ -1278,22 +1319,22 @@ class ExtensionManager {
     );
   }
 
-  getExtensionInfoById(extensionId) {
+  getExtensionInfoById(extensionId: string | number) {
     return (
       this._customExtensionInfo[extensionId] ||
       this._officialExtensionInfo[extensionId]
     );
   }
 
-  replaceExtensionWithId(newId, oldId) {
+  replaceExtensionWithId(newId: string, oldId: string) {
     const runtime = this.runtime;
-    const incomingExt = runtime._blockInfo.find((block) => block.id === newId);
+    const incomingExt = runtime._blockInfo.find((block) => block.id === newId)!;
     const incomingBlocks = incomingExt.blocks;
     const incomingOpsSet = new Set(
       incomingBlocks.map((b) => b.info.opcode).filter(Boolean),
     );
 
-    const oldExt = runtime._blockInfo.find((block) => block.id === oldId);
+    const oldExt = runtime._blockInfo.find((block) => block.id === oldId)!;
 
     const currOpsSet = new Set(
       runtime.targets
@@ -1347,7 +1388,7 @@ class ExtensionManager {
     }
   }
 
-  isExtensionURLLoaded(extensionURL) {
+  isExtensionURLLoaded(extensionURL: unknown) {
     const all = this.getLoadedExtensionURLs();
     return Object.values(all).includes(extensionURL);
   }

@@ -981,7 +981,7 @@ class Blocks {
    * @param {!object} block Blockly create event to be processed
    * @return {boolean} Whether the block successfully created
    */
-  createBlock(block: any, source: string): boolean {
+  createBlock(block: any, source?: string): boolean {
     // Does the block already exist?
     // Could happen, e.g., for an unobscured shadow.
     if (Object.prototype.hasOwnProperty.call(this._blocks, block.id)) {

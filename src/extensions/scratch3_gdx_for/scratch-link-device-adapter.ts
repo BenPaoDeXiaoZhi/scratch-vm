@@ -4,6 +4,12 @@ import Base64Util from '../../util/base64-util';
  * Adapter class
  */
 class ScratchLinkDeviceAdapter {
+    socket: any;
+    _service: any;
+    _commandChar: any;
+    _responseChar: any;
+    _deviceOnResponse: any;
+
     constructor (socket, {service, commandChar, responseChar}) {
         this.socket = socket;
 

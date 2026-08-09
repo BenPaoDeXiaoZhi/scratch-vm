@@ -3,6 +3,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM"],
+    "target": "esnext",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -24,7 +25,7 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "allowArbitraryExtensions": true
+    "allowArbitraryExtensions": true,
   },
   "include": ["src/**/*.ts", "types", "vite.config.ts"],
   "exclude": ["node_modules", "dist", "test"]

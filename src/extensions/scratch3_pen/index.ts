@@ -4,7 +4,6 @@ import TargetType from '../../extension-support/target-type';
 import Cast from '../../util/cast';
 import Clone from '../../util/clone';
 import Color from '../../util/color';
-// @ts-expect-error
 import formatMessage from 'format-message';
 import MathUtil from '../../util/math-util';
 import log from '../../util/log';
@@ -43,6 +42,9 @@ const ColorParam = {
  * @constructor
  */
 class Scratch3PenBlocks {
+    runtime: any;
+    _penDrawableId: number;
+    _penSkinId: number;
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.

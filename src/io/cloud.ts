@@ -196,7 +196,7 @@ class Cloud {
     // fix: server cloud var service is messed up with other services, it store Array as String in MangoDB sometimes, here is a temp fix.
     // hope server will fix it soon.
     if (isList && !Array.isArray(varUpdate.value)) {
-      let newValue = [];
+      let newValue: any[] = [];
       // The value can be of non-array types, such as number, string, etc.
       // Here, all of them need to be handled as arrays.
       if (typeof varUpdate.value === "string") {

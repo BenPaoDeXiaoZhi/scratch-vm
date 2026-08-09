@@ -19,7 +19,7 @@ const soup_ = '!#%()*+,-./:;=?@[]^_`{|}~' +
 const uid = function () {
     const length = 20;
     const soupLength = soup_.length;
-    const id = [];
+    const id:string[] = [];
     for (let i = 0; i < length; i++) {
         id[i] = soup_.charAt(Math.random() * soupLength);
     }

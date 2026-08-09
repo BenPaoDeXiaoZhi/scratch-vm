@@ -1,7 +1,6 @@
 import ArgumentType from '../../extension-support/argument-type';
 import BlockType from '../../extension-support/block-type';
 import Cast from '../../util/cast';
-// @ts-expect-error
 import formatMessage from 'format-message';
 import uid from '../../util/uid';
 import BT from '../../io/bt';
@@ -323,14 +322,14 @@ class EV3Motor {
     /**
      * @return {int} - this motor's current position, in the range [-inf,inf].
      */
-    get position () {
+    get position (): number {
         return this._position;
     }
 
     /**
      * @param {int} array - this motor's new position, in the range [0,360].
      */
-    set position (array) {
+    set position (array: number[]) {
         // tachoValue from Paula
         let value = array[0] + (array[1] * 256) + (array[2] * 256 * 256) + (array[3] * 256 * 256 * 256);
         if (value > 0x7fffffff) {
@@ -363,7 +362,7 @@ class EV3Motor {
         let speed = this._power * this._direction;
         const ramp = Ev3Args.RAMP;
 
-        let byteCommand = [];
+        let byteCommand: any[] = [];
         byteCommand[0] = Ev3Opcode.OPOUTPUT_TIME_SPEED;
 
         // If speed is less than zero, make it positive and multiply the input
@@ -571,7 +570,7 @@ class EV3 {
      * @type {boolean}
      * @private
      */
-    _updateDevices: boolean;
+    _updateDevices: boolean=false;
 
     constructor (runtime: any, extensionId: string) {
         /**
@@ -844,7 +843,7 @@ class EV3 {
     generateCommand (type, byteCommands, allocation = 0) {
 
         // Header (Bytes 0 - 6)
-        let command = [];
+        let command: any[] = [];
         command[2] = 0; // Message counter unused for now
         command[3] = 0; // Message counter unused for now
         command[4] = type;
@@ -883,11 +882,11 @@ class EV3 {
      */
     _pollValues () {
         if (!this.isConnected()) {
-            window.clearInterval(this._pollingIntervalID);
+            window.clearInterval(this._pollingIntervalID!);
             return;
         }
 
-        const cmds = []; // compound command
+        const cmds: any[] = []; // compound command
         let allocation = 0;
         let sensorCount = 0;
 
@@ -1006,7 +1005,7 @@ class EV3 {
             this._updateDevices = false;
 
         // eslint-disable-next-line no-undefined
-        } else if (!this._sensorPorts.includes(undefined) && !this._motorPorts.includes(undefined)) {
+        } else if (!this._sensorPorts.includes(undefined as unknown as string) && !this._motorPorts.includes(undefined as unknown as string)) {
 
             // PARSE SENSOR VALUES
             let offset = 5; // start reading sensor values at byte 5
@@ -1040,7 +1039,7 @@ class EV3 {
                     data[offset + 3]
                 ];
                 if (this._motors[i]) {
-                    this._motors[i].position = positionArray;
+                    this._motors[i]!.position = positionArray;
                 }
                 offset += 4;
             }
@@ -1066,6 +1065,8 @@ const Ev3MotorMenu = ['A', 'B', 'C', 'D'];
 const Ev3SensorMenu = ['1', '2', '3', '4'];
 
 class Scratch3Ev3Blocks {
+    runtime: any;
+    _peripheral: EV3;
 
     /**
      * The ID of the extension.
@@ -1482,9 +1483,9 @@ class Scratch3Ev3Blocks {
      * @private
      */
     _formatMenu (menu) {
-        const m = [];
+        const m: any[] = [];
         for (let i = 0; i < menu.length; i++) {
-            const obj = {};
+            const obj: any = {};
             obj.text = menu[i];
             obj.value = i.toString();
             m.push(obj);
