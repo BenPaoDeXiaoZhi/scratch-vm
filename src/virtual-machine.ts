@@ -32,6 +32,7 @@ import * as ScratchSb1Converter from "scratch-sb1-converter";
 import * as ScratchParser from "scratch-parser";
 import sb3 from "./serialization/sb3.js";
 import sb2 from "./serialization/sb2.js";
+import type { CCWApi } from "./ccwApi.js";
 
 // JSZip StreamHelper type is not exported cleanly by @turbowarp/jszip; the
 // compressed sb3 stream helper returned by zip.generateAsync falls back to any.
@@ -504,7 +505,7 @@ class VirtualMachine extends EventEmitter {
    * ccw: Set ccw API to runtime support ccw block extensions
    * @param {*} ccwAPI ccw API
    */
-  setCCWAPI(ccwAPI: any) {
+  setCCWAPI(ccwAPI: CCWApi) {
     this.runtime.setCCWAPI(ccwAPI);
   }
 

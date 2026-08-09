@@ -51,6 +51,7 @@ import Scratch3DataBlocks from "../blocks/scratch3_data";
 import Scratch3ProcedureBlocks from "../blocks/scratch3_procedures";
 import Target from "./target";
 import VirtualMachine from "../virtual-machine";
+import type { CCWApi } from "../ccwApi";
 
 // Virtual I/O devices.
 
@@ -545,11 +546,7 @@ class Runtime extends EventEmitter {
     hatsConcurrency: number;
   };
   compilerOptions: { enabled: boolean; warpTimer: boolean };
-  ccwAPI: {
-    getOpenVM(): Partial<VirtualMachine>;
-    getOnlineExtensionsConfig(): any;
-    getExtensionURLById(id: string): Promise<string>;
-  };
+  ccwAPI: CCWApi;
   waitingLoadAssetCallbackQueue: Function[];
   debug: boolean;
   _lastStepTime: number;
