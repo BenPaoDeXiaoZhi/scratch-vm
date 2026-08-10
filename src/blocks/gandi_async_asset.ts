@@ -2,6 +2,7 @@ import BlockType from "../extension-support/block-type";
 import ArgumentType from "../extension-support/argument-type";
 import Cast from "../util/cast";
 import Runtime from "../engine/runtime";
+import type RenderedTarget from "../sprites/rendered-target";
 
 class GandiAsyncAssetManager {
   runtime: Runtime;
@@ -17,8 +18,8 @@ class GandiAsyncAssetManager {
     this.runtime.on("PROJECT_RUN_STOP", this.autoClearAsyncCostume.bind(this));
 
     const config =
-      (runtime.ccwAPI as any)?.getOnlineExtensionsConfig &&
-      (runtime.ccwAPI as any)?.getOnlineExtensionsConfig();
+      runtime.ccwAPI?.getOnlineExtensionsConfig &&
+      runtime.ccwAPI?.getOnlineExtensionsConfig();
     const extConfig = config && config[this.NS];
     this.apis = extConfig?.api;
 
@@ -146,11 +147,11 @@ class GandiAsyncAssetManager {
 
   clearAsyncCostume() {
     this.runtime.targets.forEach((target) => {
-      const sprite = target.sprite as any;
+      const sprite = target.sprite;
       sprite.costumes = sprite.costumes.filter(
         (costume: any) => !costume.isRuntimeAsyncLoad,
       );
-      (target as any).setCostume(0);
+      (target as RenderedTarget).setCostume(0);
     });
   }
 

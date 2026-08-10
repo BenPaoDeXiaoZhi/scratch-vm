@@ -86,7 +86,7 @@ class VirtualMachine extends EventEmitter {
   asyncLoadingProjectAssetsSupported: boolean;
   _dragTarget: RenderedTarget | null;
   _assetsLoadProgress: Progress | null;
-  extensionManager: any;
+  extensionManager: ExtensionManager;
   securityManager: any;
   exports: {
     Sprite: typeof Sprite;
@@ -399,7 +399,7 @@ class VirtualMachine extends EventEmitter {
     this.extensionManager = new ExtensionManager(this);
     this.securityManager = this.extensionManager.securityManager;
     // extensionManager is attached dynamically (not declared on Runtime).
-    (this.runtime as any).extensionManager = this.extensionManager;
+    this.runtime.extensionManager = this.extensionManager;
 
     // Load core extensions
     for (const id of CORE_EXTENSIONS) {
@@ -677,7 +677,7 @@ class VirtualMachine extends EventEmitter {
     // Support non-blocking loading of project assets.
     if (this.asyncLoadingProjectAssetsSupported) {
       this.runtime.asyncLoadingProjectAssets = true;
-      (this.runtime as any).isLoadProjectAssetsNonBlocking = true;
+      this.runtime.isLoadProjectAssetsNonBlocking = true;
     }
     const _projectProcessingUniqueId = (this._projectProcessingUniqueId =
       Math.random());
@@ -696,7 +696,7 @@ class VirtualMachine extends EventEmitter {
     }
 
     const validationPromise = new Promise((resolve, reject) => {
-      const {default: validate} = ScratchParser;
+      const { default: validate } = ScratchParser;
       // The second argument of false below indicates to the validator that the
       // input should be parsed/validated as an entire project (and not a single sprite)
       validate(input, false, (error: any, res: unknown) => {
@@ -769,7 +769,7 @@ class VirtualMachine extends EventEmitter {
         })
         .then(() => this.runtime.handleProjectLoaded())
         .then(() => {
-          (this.runtime as any).isLoadProjectAssetsNonBlocking = false;
+          this.runtime.isLoadProjectAssetsNonBlocking = false;
           this.runtime.fireWaitingLoadCallbackQueue();
         })
         .catch((error) => {
@@ -1239,7 +1239,7 @@ class VirtualMachine extends EventEmitter {
        * @type {[{id: string; url?: string}]}
        */
       const extInfo: Array<{ id: string; url?: string }> = [];
-      extensions.extensionIDs.forEach((extensionID: string | number) => {
+      extensions.extensionIDs.forEach((extensionID: string) => {
         // 跳过已加载
         if (this.extensionManager.isExtensionLoaded(extensionID)) return;
         // 跳过 builtin
@@ -1886,11 +1886,7 @@ class VirtualMachine extends EventEmitter {
                     x: 0,
                     y: 0,
                   };
-                  (target.blocks as any).createBlock(
-                    shadowBlock,
-                    "default",
-                    undefined,
-                  );
+                  target.blocks.createBlock(shadowBlock, "default");
                   this.runtime.emitTargetBlocksChanged(
                     targetId,
                     ["add", [shadowBlock]],
@@ -2487,7 +2483,7 @@ class VirtualMachine extends EventEmitter {
     newName: string,
     sendNameChangedEvent: boolean = true,
   ) {
-    const target = this.runtime.getTargetById(targetId) as any;
+    const target = this.runtime.getTargetById(targetId) as RenderedTarget;
     if (target) {
       if (!target.isSprite()) {
         throw new Error("Cannot rename non-sprite targets.");
@@ -2837,7 +2833,7 @@ class VirtualMachine extends EventEmitter {
     // Create an array promises for extensions to load
     const extensionPromises = Array.from(extensionIDs, (id) =>
       // Only support builtin extension for now, so not using extensionURLs to load
-      this.extensionManager.loadExtensionURL(id),
+      this.extensionManager.loadExtensionURL(id as string),
     );
 
     return Promise.all(extensionPromises).then(() => {
@@ -3133,7 +3129,7 @@ class VirtualMachine extends EventEmitter {
         continue;
       }
       globalProcedures = globalProcedures.concat(
-        (target as any).blocks.getGlobalProceduresXML(),
+        target.blocks.getGlobalProceduresXML(),
       );
     }
     return globalProcedures;

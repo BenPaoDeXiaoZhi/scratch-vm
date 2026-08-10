@@ -50,8 +50,8 @@ import Scratch3SensingBlocks from "../blocks/scratch3_sensing";
 import Scratch3DataBlocks from "../blocks/scratch3_data";
 import Scratch3ProcedureBlocks from "../blocks/scratch3_procedures";
 import Target from "./target";
-import VirtualMachine from "../virtual-machine";
 import type { CCWApi } from "../ccwApi";
+import type ExtensionManager from "../extension-support/extension-manager";
 
 // Virtual I/O devices.
 
@@ -546,9 +546,11 @@ class Runtime extends EventEmitter {
     hatsConcurrency: number;
   };
   compilerOptions: { enabled: boolean; warpTimer: boolean };
-  ccwAPI: CCWApi;
+  ccwAPI: Partial<CCWApi>;
   waitingLoadAssetCallbackQueue: Function[];
   debug: boolean;
+  extensionManager?: ExtensionManager;
+  isLoadProjectAssetsNonBlocking?: boolean;
   _lastStepTime: number;
   interpolationEnabled: boolean;
   _defaultStoredSettings: {
@@ -764,20 +766,7 @@ class Runtime extends EventEmitter {
     /** ccw: add ccwAPI init value {}
      *
      */
-    this.ccwAPI = {
-      getOpenVM() {
-        debugger
-        return {}
-      },
-      getOnlineExtensionsConfig(){
-        debugger
-        return
-      },
-      async getExtensionURLById(id) {
-        debugger
-        return id
-      },
-    };
+    this.ccwAPI = {};
 
     this.waitingLoadAssetCallbackQueue = [];
 
