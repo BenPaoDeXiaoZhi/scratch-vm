@@ -9,8 +9,15 @@ if (!global.Buffer) {
   global.Buffer = BufferPolyfill;
 }
 
-globalThis.global = global
+globalThis.global = global;
 
-import VirtualMachine from './virtual-machine';
-
+import VirtualMachine from "./virtual-machine";
 export default VirtualMachine;
+
+export { type default as ExtensionManager } from "./extension-support/extension-manager";
+export { type default as Runtime } from "./engine/runtime";
+export { type default as Patcher } from "./extension-support/patcher";
+export { type default as BlockUtility } from "./engine/block-utility";
+export { type default as Target } from "./engine/target";
+export { type default as RenderedTarget } from "./sprites/rendered-target";
+export { type default as Sprite } from "./sprites/sprite";

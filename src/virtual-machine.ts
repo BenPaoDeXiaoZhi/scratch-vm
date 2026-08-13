@@ -668,7 +668,15 @@ class VirtualMachine extends EventEmitter {
   loadProject(
     input: any,
     jsonFormatter?: (arg0: any) => void,
-    options?: any,
+    options?: {
+      confirmExtensionsCallBack: (
+        info: {
+          id: string;
+          url?: string | undefined;
+        }[],
+      ) => Promise<boolean>;
+      extractProperties: { shouldMarkLockDeleteAbility: any };
+    },
   ): Promise<any> {
     // If assets are being loaded non-blockingly, they can all be aborted at once.
     if (this.runtime.asyncLoadingProjectAssets) {
@@ -1133,7 +1141,15 @@ class VirtualMachine extends EventEmitter {
     projectJSON: { projectVersion: any; targets: string | any[] },
     zip: any,
     _projectProcessingUniqueId: number,
-    options: any,
+    options?: {
+      confirmExtensionsCallBack: (
+        info: {
+          id: string;
+          url?: string | undefined;
+        }[],
+      ) => Promise<boolean>;
+      extractProperties: { shouldMarkLockDeleteAbility: any };
+    },
   ): Promise<any> {
     // Clear the current runtime
     this.clear();
@@ -1224,7 +1240,12 @@ class VirtualMachine extends EventEmitter {
     _projectProcessingUniqueId: number | null,
     isRemoteOperation?: boolean,
     options?: {
-      confirmExtensionsCallBack: any;
+      confirmExtensionsCallBack: (
+        info: {
+          id: string;
+          url?: string | undefined;
+        }[],
+      ) => Promise<boolean>;
       extractProperties: { shouldMarkLockDeleteAbility: any };
     },
   ): Promise<any> {
