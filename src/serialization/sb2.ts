@@ -1030,7 +1030,7 @@ const reorderParsedTargets = function (targets) {
  */
 const sb2import = function (json, runtime, optForceSprite, zip) {
   const extensions = {
-    extensionIDs: new Set(),
+    extensionIDs: new Set<string>(),
     extensionURLs: new Map(),
   };
   const assetsPromises = parseScratchAssets(

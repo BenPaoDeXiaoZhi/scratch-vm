@@ -33,6 +33,10 @@ import * as ScratchParser from "scratch-parser";
 import sb3 from "./serialization/sb3.js";
 import sb2 from "./serialization/sb2.js";
 import type { CCWApi } from "./ccwApi.js";
+import JSGenerator from "./compiler/jsgen.js";
+import { IRGenerator, ScriptTreeGenerator } from "./compiler/irgen.js";
+import Thread from "./engine/thread.js";
+import execute from "./engine/execute.js";
 
 // JSZip StreamHelper type is not exported cleanly by @turbowarp/jszip; the
 // compressed sb3 stream helper returned by zip.generateAsync falls back to any.
@@ -425,12 +429,11 @@ class VirtualMachine extends EventEmitter {
           "You are using unsupported APIs. WHEN your code breaks, do not expect help.",
         );
         return {
-          JSGenerator: require("./compiler/jsgen.js"),
-          IRGenerator: require("./compiler/irgen.js").IRGenerator,
-          ScriptTreeGenerator: require("./compiler/irgen.js")
-            .ScriptTreeGenerator,
-          Thread: require("./engine/thread.js"),
-          execute: require("./engine/execute.js"),
+          JSGenerator: JSGenerator,
+          IRGenerator: IRGenerator,
+          ScriptTreeGenerator: ScriptTreeGenerator,
+          Thread: Thread,
+          execute: execute,
         };
       },
     };
@@ -1232,7 +1235,7 @@ class VirtualMachine extends EventEmitter {
   async installTargets(
     targets: any[],
     extensions: {
-      extensionIDs: any[];
+      extensionIDs: Set<string>;
       extensionURLs: { get: (arg0: any) => any };
     },
     gandiObject: any,
@@ -1484,14 +1487,13 @@ class VirtualMachine extends EventEmitter {
   ): Promise<any> {
     // Validate & parse
 
-    const sb2 = require("./serialization/sb2");
     return sb2
       .deserialize(sprite, this.runtime, true, zip)
-      .then(({ targets, extensions, gandi }) =>
+      .then(({ targets, extensions }) =>
         this.installTargets(
           targets,
           extensions,
-          gandi,
+          {},
           false,
           null,
           isRemoteOperation,
@@ -1512,7 +1514,6 @@ class VirtualMachine extends EventEmitter {
     isRemoteOperation?: boolean,
   ): Promise<any> {
     // Validate & parse
-    const sb3 = require("./serialization/sb3");
     return sb3
       .deserialize(sprite, this.runtime, zip, true)
       .then(({ targets, extensions, gandi }) =>
@@ -2799,7 +2800,6 @@ class VirtualMachine extends EventEmitter {
    * @returns {object}
    */
   exportStandaloneBlocks(blockObjects: any): object {
-    const sb3 = require("./serialization/sb3");
     const serialized = sb3.serializeStandaloneBlocks(
       blockObjects,
       this.runtime,
@@ -2821,7 +2821,6 @@ class VirtualMachine extends EventEmitter {
     targetId: any,
     optFromTargetId: any,
   ): Promise<any> {
-    const sb3 = require("./serialization/sb3");
     // TODO: support any remote extensions in block
     const { blocks: copiedBlocks, extensionURLs } =
       sb3.deserializeStandaloneBlocks(blocks);
@@ -3030,7 +3029,7 @@ class VirtualMachine extends EventEmitter {
   emitWorkspaceUpdate() {
     const editingTarget = this.editingTarget as RenderedTarget;
     // Create a list of broadcast message Ids according to the stage variables
-    const stage = this.runtime.getTargetForStage() as any;
+    const stage = this.runtime.getTargetForStage();
     const stageVariables = stage?.variables || {};
     let messageIds: string[] = [];
     for (const varId in stageVariables) {
@@ -3041,7 +3040,7 @@ class VirtualMachine extends EventEmitter {
     // Go through all blocks on all targets, removing referenced
     // broadcast ids from the list.
     for (let i = 0; i < this.runtime.targets.length; i++) {
-      const currTarget = this.runtime.targets[i] as any;
+      const currTarget = this.runtime.targets[i];
       const currBlocks: any = currTarget.blocks._blocks;
       for (const blockId in currBlocks) {
         if (currBlocks[blockId].fields.BROADCAST_OPTION) {

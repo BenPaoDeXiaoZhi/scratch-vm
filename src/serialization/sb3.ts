@@ -1802,11 +1802,16 @@ const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
  * @param {boolean} isSingleSprite - If true treat as single sprite, else treat as whole project
  * @returns {Promise.<ImportedProject>} Promise that resolves to the list of targets after the project is deserialized
  */
-const deserialize = async function (json, runtime, zip, isSingleSprite?: boolean) {
+const deserialize = async function (
+  json,
+  runtime,
+  zip,
+  isSingleSprite?: boolean,
+) {
   await checkPlatformCompatibility(json, runtime);
 
   const extensions = {
-    extensionIDs: new Set(),
+    extensionIDs: new Set<string>(),
     extensionURLs: new Map(),
   };
 

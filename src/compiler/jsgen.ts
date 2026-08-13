@@ -410,8 +410,26 @@ class Frame {
 }
 
 class JSGenerator {
-  static unstable_exports: any
-  static testingApparatus?: any
+  // For extensions
+  static unstable_exports = {
+    TYPE_NUMBER,
+    TYPE_STRING,
+    TYPE_BOOLEAN,
+    TYPE_UNKNOWN,
+    TYPE_NUMBER_NAN,
+    factoryNameVariablePool,
+    functionNameVariablePool,
+    generatorNameVariablePool,
+    VariablePool,
+    PEN_EXT,
+    PEN_STATE,
+    TypedInput,
+    ConstantInput,
+    VariableInput,
+    Frame,
+    sanitize,
+  };
+  static testingApparatus?: any;
   /**
    * @type {IntermediateScript}
    */
@@ -1678,7 +1696,7 @@ class JSGenerator {
     // Only include arguments if the procedure accepts any.
     let joinedArgs = "";
     if (procedureData.arguments.length) {
-      const args:any[] = [];
+      const args: any[] = [];
       for (const input of node.arguments) {
         args.push(this.descendInput(input).asSafe());
       }
@@ -1828,7 +1846,11 @@ class JSGenerator {
    * @param {string|null} [frameName] Name of the stack frame variable, if any
    * @returns {string} The JS of the call.
    */
-  generateCompatibilityLayerCall(node: any, setFlags: boolean, frameName: string | null = null): string {
+  generateCompatibilityLayerCall(
+    node: any,
+    setFlags: boolean,
+    frameName: string | null = null,
+  ): string {
     const opcode = node.opcode;
 
     let result = "yield* executeInCompatibilityLayer({";
@@ -1936,26 +1958,6 @@ class JSGenerator {
     return fn;
   }
 }
-
-// For extensions.
-JSGenerator.unstable_exports = {
-  TYPE_NUMBER,
-  TYPE_STRING,
-  TYPE_BOOLEAN,
-  TYPE_UNKNOWN,
-  TYPE_NUMBER_NAN,
-  factoryNameVariablePool,
-  functionNameVariablePool,
-  generatorNameVariablePool,
-  VariablePool,
-  PEN_EXT,
-  PEN_STATE,
-  TypedInput,
-  ConstantInput,
-  VariableInput,
-  Frame,
-  sanitize,
-};
 
 // Test hook used by automated snapshot testing.
 JSGenerator.testingApparatus = null;
