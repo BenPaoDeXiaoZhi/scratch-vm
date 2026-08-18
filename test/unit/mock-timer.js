@@ -62,7 +62,7 @@ test('start / timeElapsed', t => new Promise(resolve => {
     timer.advanceMockTime(halfDelay);
 
     // give the mock timer a chance to run tasks
-    global.setTimeout(() => {
+    globalThis.setTimeout(() => {
         // we've only mock-waited for half the delay so it should not have run yet
         t.equal(timeoutCalled, 0);
 

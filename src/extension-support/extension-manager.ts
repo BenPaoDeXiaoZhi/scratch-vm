@@ -1062,10 +1062,7 @@ class ExtensionManager {
     officialExtension[extensionId] = Extension;
   }
 
-  addCustomExtensionInfo(
-    obj: Record<string, any>,
-    url: string,
-  ) {
+  addCustomExtensionInfo(obj: Record<string, any>, url: string) {
     const { Extension, ...ext } = obj;
     const extensionId = ext.info && ext.info.extensionId;
     if (!extensionId) {
@@ -1121,8 +1118,8 @@ class ExtensionManager {
       // 3. return a IIFE which called global Scratch.extensions.register to register
       //      extension obj will be added in IIFEExtensionInfoList
       const needRegister =
-        global.IIFEExtensionInfoList &&
-        global.IIFEExtensionInfoList.find(
+        globalThis.IIFEExtensionInfoList &&
+        globalThis.IIFEExtensionInfoList.find(
           ({ extensionObject }) =>
             extensionObject.info.extensionId === extensionId,
         );
@@ -1166,13 +1163,15 @@ class ExtensionManager {
               url: rewritten,
               onSuccess: async () => {
                 try {
-                  if (global.IIFEExtensionInfoList) {
+                  if (globalThis.IIFEExtensionInfoList) {
                     // for those extension which registered by scratch.extensions.register in IIFE
-                    global.IIFEExtensionInfoList.forEach(
+                    globalThis.IIFEExtensionInfoList.forEach(
                       ({ extensionObject, extensionInstance }) => {
                         this.addCustomExtensionInfo(extensionObject, url);
                         if (disallowIIFERegister) {
-                          onlyAdded.push(extensionObject.info.extensionId as string);
+                          onlyAdded.push(
+                            extensionObject.info.extensionId as string,
+                          );
                         } else {
                           this.registerExtension(
                             extensionObject.info.extensionId,
@@ -1184,27 +1183,27 @@ class ExtensionManager {
                       },
                     );
                   }
-                  if (global.ExtensionLib) {
+                  if (globalThis.ExtensionLib) {
                     // for those extension which developed by user using ccw-customExt-tool
-                    const lib = await global.ExtensionLib;
+                    const lib = await globalThis.ExtensionLib;
                     Object.keys(lib).forEach((key) => {
                       const obj = lib[key];
                       this.addCustomExtensionInfo(obj, url);
                       onlyAdded.push(obj.info.extensionId);
                     });
-                    delete global.ExtensionLib;
+                    delete globalThis.ExtensionLib;
                   }
-                  if (global.tempExt) {
+                  if (globalThis.tempExt) {
                     // for user developing custom extension
-                    const obj = global.tempExt;
+                    const obj = globalThis.tempExt;
                     this.addCustomExtensionInfo(obj, url);
                     onlyAdded.push(obj.info.extensionId);
-                    delete global.tempExt;
+                    delete globalThis.tempExt;
                   }
-                  if (global.scratchExtensions) {
+                  if (globalThis.scratchExtensions) {
                     // for Gandi extension service
                     const { default: lib } =
-                      await global.scratchExtensions.default();
+                      await globalThis.scratchExtensions.default();
                     Object.entries<any>(lib).forEach(([key, obj]) => {
                       if (!(obj.info && obj.info.extensionId)) {
                         // compatible with some legacy gandi extension service
@@ -1229,10 +1228,10 @@ class ExtensionManager {
           if (onlyAdded.length > 0 || addedAndLoaded.length > 0) {
             this.runtime.emit("EXTENSION_LIBRARY_UPDATED");
           }
-          delete global.scratchExtensions;
-          delete global.tempExt;
-          delete global.ExtensionLib;
-          delete global.IIFEExtensionInfoList;
+          delete globalThis.scratchExtensions;
+          delete globalThis.tempExt;
+          delete globalThis.ExtensionLib;
+          delete globalThis.IIFEExtensionInfoList;
         })
     );
   }

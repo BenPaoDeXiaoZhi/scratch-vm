@@ -1,4 +1,4 @@
-const {test} = require('tap');
+const { test } = require('tap');
 const ExtensionManager = require('../../src/extension-support/extension-manager');
 const VM = require('../fixtures/make-test-vm');
 
@@ -29,12 +29,12 @@ test('loadExtensionURL, getExtensionURLs, deduplication', async t => {
 
     let loadedExtensions = 0;
     vm.extensionManager.securityManager.getSandboxMode = () => 'unsandboxed';
-    global.document = {
+    globalThis.document = {
         createElement: () => {
             loadedExtensions++;
             const element = {};
             setTimeout(() => {
-                global.Scratch.extensions.register({
+                globalThis.Scratch.extensions.register({
                     getInfo: () => ({
                         id: `extension${loadedExtensions}`
                     })
@@ -45,13 +45,13 @@ test('loadExtensionURL, getExtensionURLs, deduplication', async t => {
         },
         getElementById: () => null,
         body: {
-            append: () => {},
-            appendChild: () => {},
-            removeChild: () => {}
+            append: () => { },
+            appendChild: () => { },
+            removeChild: () => { }
         }
     };
-    global.addEventListener = () => {};
-    global.removeEventListener = () => {};
+    globalThis.addEventListener = () => { };
+    globalThis.removeEventListener = () => { };
 
     const url1 = 'https://turbowarp.org/1.js';
     t.equal(vm.extensionManager.isExtensionURLLoaded(url1), false);

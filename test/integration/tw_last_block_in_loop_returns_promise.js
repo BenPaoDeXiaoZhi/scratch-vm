@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const {test} = require('tap');
+const { test } = require('tap');
 const VM = require('../../src/virtual-machine');
 
 const compilerAndInterpreter = (name, callback) => {
@@ -16,7 +16,7 @@ const compilerAndInterpreter = (name, callback) => {
     });
 };
 
-global.document = {
+globalThis.document = {
     hidden: true
 };
 

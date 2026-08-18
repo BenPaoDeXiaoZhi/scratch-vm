@@ -15,9 +15,9 @@ let openVM: any = null;
 let translate: any = null;
 
 const clearScratchAPI = () => {
-  delete global.IIFEExtensionInfoList;
-  if (global.Scratch) {
-    global.Scratch.extensions = {
+  delete globalThis.IIFEExtensionInfoList;
+  if (globalThis.Scratch) {
+    globalThis.Scratch.extensions = {
       unsandboxed: true,
       register: (extensionInstance: any) => {
         const info = extensionInstance.getInfo();
@@ -30,13 +30,13 @@ const clearScratchAPI = () => {
     // from the global Scratch object. But the extension might still hold a reference
     // to the original object and access those properties later. To avoid breakage,
     // we clone the global Scratch object first, then only clear the global's APIs.
-    global.Scratch = { ...global.Scratch };
-    global.Scratch.vm = null;
-    global.Scratch.runtime = null;
-    global.Scratch.renderer = null;
+    globalThis.Scratch = { ...globalThis.Scratch };
+    globalThis.Scratch.vm = null;
+    globalThis.Scratch.runtime = null;
+    globalThis.Scratch.renderer = null;
     // In theory, translate should also be nulled out, since each extension needs its own translate.
     // But we keep it for now to avoid errors from extensions that accidentally rely on it.
-    // global.Scratch.translate = null;
+    // globalThis.Scratch.translate = null;
 
     // NOTE: The extension should either:
     // - keep a reference to the original Scratch object
@@ -44,10 +44,10 @@ const clearScratchAPI = () => {
     //      or simply `const Scratch = window.Scratch;` at the top)
     //   → the extension can still access vm/runtime/translate through the saved reference
     // or:
-    // - not keep a reference, and always access via global.Scratch
-    //   → the extension must NOT access vm/runtime/translate through global.Scratch
-    //     (global.Scratch only provides basic APIs like Cast, ArgumentType, etc.)
-    //     vm/runtime are nulled out, and `global.Scratch.translate` should also not be used,
+    // - not keep a reference, and always access via globalThis.Scratch
+    //   → the extension must NOT access vm/runtime/translate through globalThis.Scratch
+    //     (globalThis.Scratch only provides basic APIs like Cast, ArgumentType, etc.)
+    //     vm/runtime are nulled out, and `globalThis.Scratch.translate` should also not be used,
     //     since it will be overwritten by the next extension
   }
 };
@@ -63,8 +63,11 @@ const setupScratchAPI = (vm: VirtualMachine) => {
       },
       Extension: () => extensionInstance.constructor,
     };
-    global.IIFEExtensionInfoList = global.IIFEExtensionInfoList || [];
-    global.IIFEExtensionInfoList.push({ extensionObject, extensionInstance });
+    globalThis.IIFEExtensionInfoList = globalThis.IIFEExtensionInfoList || [];
+    globalThis.IIFEExtensionInfoList.push({
+      extensionObject,
+      extensionInstance,
+    });
     return;
   };
 
@@ -84,7 +87,7 @@ const setupScratchAPI = (vm: VirtualMachine) => {
 
   // 需要创建新的 Scratch Object
   // 否则所有 extension 都共享一个 Scratch object → 共享同一个 translate
-  global.Scratch = {
+  globalThis.Scratch = {
     ArgumentType,
     BlockType,
     TargetType,
@@ -107,7 +110,15 @@ interface ScriptWithCallbacks extends HTMLScriptElement {
   failedCallBack: Array<(error: any, url?: string) => void>;
 }
 
-const createdScriptLoader = ({ url, onSuccess, onError }: { url: string; onSuccess: (url: string) => void; onError: (error: any, url?: string) => void }) => {
+const createdScriptLoader = ({
+  url,
+  onSuccess,
+  onError,
+}: {
+  url: string;
+  onSuccess: (url: string) => void;
+  onError: (error: any, url?: string) => void;
+}) => {
   if (!url) {
     return onError("remote extension url is null");
   }
@@ -132,10 +143,10 @@ const createdScriptLoader = ({ url, onSuccess, onError }: { url: string; onSucce
   const logError = (e: any) => {
     scriptError = e;
   };
-  global.addEventListener("error", logError);
+  globalThis.addEventListener("error", logError);
 
   const removeScript = () => {
-    global.removeEventListener("error", logError);
+    globalThis.removeEventListener("error", logError);
     document.body.removeChild(script);
   };
 
@@ -165,17 +176,20 @@ const createdScriptLoader = ({ url, onSuccess, onError }: { url: string; onSucce
   return script;
 };
 
-// Because setupScratchAPI requires messing with global state (global.Scratch),
+// Because setupScratchAPI requires messing with global state (globalThis.Scratch),
 // only let one extension load at a time.
-const limiter = new AsyncLimiter(async (vm: VirtualMachine, callback: () => Promise<any>) => {
-  setupScratchAPI(vm);
-  try {
-    const res = await callback();
-    return res;
-  } finally {
-    clearScratchAPI();
-  }
-}, 1);
+const limiter = new AsyncLimiter(
+  async (vm: VirtualMachine, callback: () => Promise<any>) => {
+    setupScratchAPI(vm);
+    try {
+      const res = await callback();
+      return res;
+    } finally {
+      clearScratchAPI();
+    }
+  },
+  1,
+);
 /**
  * Sets up the Scratch API and ensures that only one is executing at a time to prevent race conditions.
  * @async
@@ -183,6 +197,9 @@ const limiter = new AsyncLimiter(async (vm: VirtualMachine, callback: () => Prom
  * @param {() => Promise} callback - Async callback to execute with Scratch API.
  * @returns {Promise} - The promise that resolves when the callback completes.
  */
-const withScratchAPI = async (vm: VirtualMachine, callback: () => Promise<any>) => limiter.do(vm, callback);
+const withScratchAPI = async (
+  vm: VirtualMachine,
+  callback: () => Promise<any>,
+) => limiter.do(vm, callback);
 
 export { withScratchAPI, createdScriptLoader };

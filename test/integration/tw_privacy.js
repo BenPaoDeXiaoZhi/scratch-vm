@@ -1,4 +1,4 @@
-const {test} = require('tap');
+const { test } = require('tap');
 const Runtime = require('../../src/engine/runtime');
 const VM = require('../../src/virtual-machine');
 const makeTestVM = require('../fixtures/make-test-vm');
@@ -8,7 +8,7 @@ const mockRenderer = () => ({
     },
 
     privateSkinAccess: true,
-    setPrivateSkinAccess (enabled) {
+    setPrivateSkinAccess(enabled) {
         this.privateSkinAccess = enabled;
     }
 });
@@ -94,11 +94,11 @@ test('custom extensions', async t => {
     const vm = makeTestVM();
     vm.attachRenderer(mockRenderer());
     vm.extensionManager.securityManager.getSandboxMode = () => 'unsandboxed';
-    global.document = {
+    globalThis.document = {
         createElement: () => {
             const element = {};
             setTimeout(() => {
-                global.Scratch.extensions.register({
+                globalThis.Scratch.extensions.register({
                     getInfo: () => ({
                         id: 'example',
                         name: 'example'
@@ -110,14 +110,14 @@ test('custom extensions', async t => {
         },
         getElementById: () => null,
         body: {
-            appendChild: () => {},
-            append: () => {},
-            appendChild: () => {},
-            removeChild: () => {}
+            appendChild: () => { },
+            append: () => { },
+            appendChild: () => { },
+            removeChild: () => { }
         }
     };
-    global.addEventListener = () => {};
-    global.removeEventListener = () => {};
+    globalThis.addEventListener = () => { };
+    globalThis.removeEventListener = () => { };
 
     t.equal(vm.renderer.privateSkinAccess, true);
     await vm.extensionManager.loadExtensionURL('http://localhost/example');

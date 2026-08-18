@@ -2412,7 +2412,7 @@ class Runtime extends EventEmitter {
     return this._blockInfo /* powered by xigua start */
       .filter(
         ({ onlyVisibleOnShortcut }) =>
-          global.__XIGUA_SHORTCUT || Boolean(!onlyVisibleOnShortcut),
+          globalThis.__XIGUA_SHORTCUT || Boolean(!onlyVisibleOnShortcut),
       ) /* powered by xigua end */
       .map((categoryInfo) => {
         const {

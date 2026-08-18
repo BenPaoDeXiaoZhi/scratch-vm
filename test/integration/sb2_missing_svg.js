@@ -13,14 +13,14 @@ const FakeRenderer = require('../fixtures/fake-renderer');
 const FakeBitmapAdapter = require('../fixtures/fake-bitmap-adapter');
 const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer;
 const VirtualMachine = require('../../src/index');
-const {serializeCostumes} = require('../../src/serialization/serialize-assets');
+const { serializeCostumes } = require('../../src/serialization/serialize-assets');
 
 const projectUri = path.resolve(__dirname, '../fixtures/missing_svg.sb2');
 const project = readFileToBuffer(projectUri);
 
 const missingCostumeAssetId = 'beca8009621913e2f5b3111eed2d8210';
 
-global.Image = function () {
+globalThis.Image = function () {
     const image = {
         width: 1,
         height: 1
@@ -29,7 +29,7 @@ global.Image = function () {
     return image;
 };
 
-global.document = {
+globalThis.document = {
     createElement: () => ({
         // Create mock canvas
         getContext: () => ({

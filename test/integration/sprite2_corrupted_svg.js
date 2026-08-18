@@ -13,9 +13,9 @@ const md5 = require('js-md5');
 const makeTestStorage = require('../fixtures/make-test-storage');
 const FakeRenderer = require('../fixtures/fake-renderer');
 const FakeBitmapAdapter = require('../fixtures/fake-bitmap-adapter');
-const {extractAsset, readFileToBuffer} = require('../fixtures/readProjectFile');
+const { extractAsset, readFileToBuffer } = require('../fixtures/readProjectFile');
 const VirtualMachine = require('../../src/index');
-const {serializeCostumes} = require('../../src/serialization/serialize-assets');
+const { serializeCostumes } = require('../../src/serialization/serialize-assets');
 
 const projectUri = path.resolve(__dirname, '../fixtures/default.sb3');
 const project = readFileToBuffer(projectUri);
@@ -30,7 +30,7 @@ const originalCostume = extractAsset(spriteUri, costumeFileName);
 // Loading the project back into the VM will correct the assetId and md5
 const brokenCostumeMd5 = md5(originalCostume);
 
-global.Image = function () {
+globalThis.Image = function () {
     const image = {
         width: 1,
         height: 1
@@ -39,7 +39,7 @@ global.Image = function () {
     return image;
 };
 
-global.document = {
+globalThis.document = {
     createElement: () => ({
         // Create mock canvas
         getContext: () => ({

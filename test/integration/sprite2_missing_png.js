@@ -13,7 +13,7 @@ const FakeRenderer = require('../fixtures/fake-renderer');
 const FakeBitmapAdapter = require('../fixtures/fake-bitmap-adapter');
 const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer;
 const VirtualMachine = require('../../src/index');
-const {serializeCostumes} = require('../../src/serialization/serialize-assets');
+const { serializeCostumes } = require('../../src/serialization/serialize-assets');
 
 // The particular project that we're loading doesn't matter for this test
 const projectUri = path.resolve(__dirname, '../fixtures/default.sb3');
@@ -24,7 +24,7 @@ const sprite = readFileToBuffer(spriteUri);
 
 const missingCostumeAssetId = 'aadce129bfe4e57f0dd81478f3ed82aa';
 
-global.Image = function () {
+globalThis.Image = function () {
     const image = {
         width: 1,
         height: 1
@@ -33,7 +33,7 @@ global.Image = function () {
     return image;
 };
 
-global.document = {
+globalThis.document = {
     createElement: () => ({
         // Create mock canvas
         getContext: () => ({

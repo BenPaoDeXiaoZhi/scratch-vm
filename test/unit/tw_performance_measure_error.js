@@ -3,11 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const VirtualMachine = require('../../src/virtual-machine');
 
-global.performance = {
-    mark () {
+globalThis.performance = {
+    mark() {
         // No-op
     },
-    measure () {
+    measure() {
         throw new Error('Mock error to simulate browser garbage collecting one of the marks before this code runs');
     }
 };

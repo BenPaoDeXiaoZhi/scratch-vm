@@ -1,12 +1,12 @@
 class MockBlob {
-    constructor (objects = [], options = {}) {
+    constructor(objects = [], options = {}) {
         this.size = objects.reduce((a, i) => a + i.byteLength, 0);
         this.type = options || options.type;
 
         this._objects = objects;
     }
 
-    _readAsBuffer () {
+    _readAsBuffer() {
         const result = Buffer.alloc(this.size);
         let i = 0;
         for (const object of this._objects) {
@@ -18,4 +18,4 @@ class MockBlob {
     }
 }
 
-global.Blob = MockBlob;
+globalThis.Blob = MockBlob;

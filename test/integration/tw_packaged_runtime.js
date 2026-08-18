@@ -1,12 +1,12 @@
-const {loadCostume} = require('../../src/import/load-costume');
-const {loadSound} = require('../../src/import/load-sound');
+const { loadCostume } = require('../../src/import/load-costume');
+const { loadSound } = require('../../src/import/load-sound');
 const Runtime = require('../../src/engine/runtime');
 const makeTestStorage = require('../fixtures/make-test-storage');
 const FakeRenderer = require('../fixtures/fake-renderer');
 const FakeBitmapAdapter = require('../fixtures/fake-bitmap-adapter');
-const {test} = require('tap');
+const { test } = require('tap');
 
-global.Image = function () {
+globalThis.Image = function () {
     const image = {
         width: 10,
         height: 10
@@ -20,7 +20,7 @@ global.Image = function () {
 };
 
 class FakeAudioEngine {
-    decodeSoundPlayer () {
+    decodeSoundPlayer() {
         return Promise.resolve({
             id: 0,
             buffer: {
@@ -45,7 +45,7 @@ test('load bitmap in packaged runtime', async t => {
         null,
         true
     );
-    const costume = await loadCostume(`${asset.assetId}.png`, {asset}, rt);
+    const costume = await loadCostume(`${asset.assetId}.png`, { asset }, rt);
     t.equal(costume.asset, null);
     t.end();
 });
@@ -63,7 +63,7 @@ test('load vector in packaged runtime', async t => {
         null,
         true
     );
-    const costume = await loadCostume(`${asset.assetId}.svg`, {asset}, rt);
+    const costume = await loadCostume(`${asset.assetId}.svg`, { asset }, rt);
     t.equal(costume.asset, null);
     t.end();
 });
