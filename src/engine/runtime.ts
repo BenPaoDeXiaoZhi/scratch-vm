@@ -52,6 +52,7 @@ import Scratch3ProcedureBlocks from "../blocks/scratch3_procedures";
 import Target from "./target";
 import type { CCWApi } from "../ccwApi";
 import type ExtensionManager from "../extension-support/extension-manager";
+import type { RenderWebGL } from "@open-ccw/scratch-render";
 
 // Virtual I/O devices.
 
@@ -105,7 +106,6 @@ type ExtensionBlockMetadata = any;
 type ConvertedBlockInfo = any;
 type ScratchLinkSocket = any;
 type AudioEngine = any;
-type RenderWebGL = any;
 type ScratchStorage = any;
 
 const defaultBlockPackages = {
@@ -614,7 +614,7 @@ class Runtime extends EventEmitter {
   finishedAssetRequests: number;
   _linkSocketFactory: (type: string) => ScratchLinkSocket = () => null;
   audioEngine: AudioEngine | null;
-  renderer: RenderWebGL | null;
+  renderer: RenderWebGL | null = null;
   v2BitmapAdapter: Function = () => {};
   storage: ScratchStorage | null;
   scratchBlocks: any;
@@ -4721,8 +4721,8 @@ class Runtime extends EventEmitter {
     const enforceRestrictions =
       this.enforcePrivacy &&
       Object.values(this.externalCommunicationMethods).some((i) => i);
-    if (this.renderer && this.renderer.setPrivateSkinAccess) {
-      this.renderer.setPrivateSkinAccess(!enforceRestrictions);
+    if (this.renderer && "setPrivateSkinAccess" in this.renderer) {
+      (this.renderer.setPrivateSkinAccess as any)(!enforceRestrictions);
     }
   }
 
