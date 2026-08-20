@@ -1,6 +1,6 @@
 {
   "name": "@open-ccw/scratch-vm",
-  "version": "9.9.17",
+  "version": "9.9.18",
   "description": "Virtual Machine for Scratch 3.0 merged tw-vm",
   "author": "Massachusetts Institute of Technology",
   "license": "LGPL-3.0-only",
@@ -25,8 +25,8 @@
     "prepublishOnly": "npm run build:lib"
   },
   "devDependencies": {
-    "@open-ccw/scratch-render": "^9.9.12",
-    "@open-ccw/scratch-storage": "^9.9.10",
+    "@open-ccw/scratch-render": "^9.9.18",
+    "@open-ccw/scratch-storage": "^9.9.12",
     "@types/crypto-js": "^4.2.2",
     "@types/immutable": "^3.8.6",
     "@typescript/typescript6": "^6.0.2",

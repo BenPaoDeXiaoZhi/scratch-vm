@@ -58,6 +58,22 @@ const CORE_EXTENSIONS = [
   // 'myBlocks'
 ];
 
+type ConfirmExtensionsCallBack = (
+  info: {
+    id: string;
+    url?: string | undefined;
+  }[],
+) => Promise<
+  | [false, null]
+  | [
+      true,
+      {
+        id: string;
+        url?: string | undefined;
+      }[],
+    ]
+>;
+
 // Disable missing translation warnings in console
 formatMessage.setup({
   missingTranslation: "ignore",
@@ -672,12 +688,7 @@ class VirtualMachine extends EventEmitter {
     input: any,
     jsonFormatter?: (arg0: any) => void,
     options?: {
-      confirmExtensionsCallBack: (
-        info: {
-          id: string;
-          url?: string | undefined;
-        }[],
-      ) => Promise<boolean>;
+      confirmExtensionsCallBack: ConfirmExtensionsCallBack;
       extractProperties: { shouldMarkLockDeleteAbility: any };
     },
   ): Promise<any> {
@@ -1145,12 +1156,7 @@ class VirtualMachine extends EventEmitter {
     zip: any,
     _projectProcessingUniqueId: number,
     options?: {
-      confirmExtensionsCallBack: (
-        info: {
-          id: string;
-          url?: string | undefined;
-        }[],
-      ) => Promise<boolean>;
+      confirmExtensionsCallBack: ConfirmExtensionsCallBack;
       extractProperties: { shouldMarkLockDeleteAbility: any };
     },
   ): Promise<any> {
@@ -1236,25 +1242,20 @@ class VirtualMachine extends EventEmitter {
     targets: any[],
     extensions: {
       extensionIDs: Set<string>;
-      extensionURLs: { get: (arg0: any) => any };
+      extensionURLs: Map<string, any>;
     },
     gandiObject: any,
     wholeProject: boolean,
     _projectProcessingUniqueId: number | null,
     isRemoteOperation?: boolean,
     options?: {
-      confirmExtensionsCallBack: (
-        info: {
-          id: string;
-          url?: string | undefined;
-        }[],
-      ) => Promise<boolean>;
+      confirmExtensionsCallBack: ConfirmExtensionsCallBack;
       extractProperties: { shouldMarkLockDeleteAbility: any };
     },
   ): Promise<any> {
     await this.extensionManager.allAsyncExtensionsLoaded();
     const addedGandiObject = this.runtime.gandi.merge(gandiObject);
-    const extensionPromises: any[] = [];
+    const extensionPromises: Promise<any>[] = [];
     // 可选的确认非官方扩展安装回调
     // 在加载扩展前，收集即将加载的非官方扩展信息并等待确认
     const confirmExtensionsCallBack = options?.confirmExtensionsCallBack;
@@ -1286,7 +1287,12 @@ class VirtualMachine extends EventEmitter {
       });
       if (extInfo.length > 0) {
         // 等待确认
-        await confirmExtensionsCallBack(extInfo);
+        const [replace, info] = await confirmExtensionsCallBack(extInfo);
+        if (replace) {
+          for (let { id, url } of info) {
+            extensions.extensionURLs.set(id, url);
+          }
+        }
       }
     }
     extensions.extensionIDs.forEach((extensionID: any) => {

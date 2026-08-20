@@ -32,7 +32,7 @@ export interface ProjectStats {
 
 export interface CCWApi {
   getOpenVM(): Partial<VirtualMachine>;
-  getOnlineExtensionsConfig(): Promise<OnlineExtConfig>;
+  getOnlineExtensionsConfig(): OnlineExtConfig;
   getExtensionURLById(id: string): Promise<string>;
   /**
    * 获取用户投了几个币
