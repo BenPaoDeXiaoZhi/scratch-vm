@@ -1025,7 +1025,11 @@ class ExtensionManager {
   isValidExtensionURL(extensionURL: string | URL) {
     try {
       const parsedURL = new URL(extensionURL);
-      return parsedURL.protocol === "https:" || parsedURL.protocol === "http:";
+      return (
+        parsedURL.protocol === "https:" ||
+        parsedURL.protocol === "http:" ||
+        parsedURL.protocol === "blob:"
+      );
     } catch (e) {
       return false;
     }

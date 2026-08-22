@@ -131,7 +131,9 @@ const createdScriptLoader = ({
   }
 
   const script = document.createElement("script") as ScriptWithCallbacks;
-  script.src = `${url + (url.includes("?") ? "&" : "?")}t=${Date.now()}`;
+  script.src = url.startsWith("blob:")
+    ? url
+    : `${url + (url.includes("?") ? "&" : "?")}t=${Date.now()}`;
   script.id = url;
   script.defer = true;
   script.type = "module";
